@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-/* Added Crown to the lucide-react imports to fix the error on line 72 */
-import { Plus, Gift as GiftIcon, Edit3, Trash2, Wand2, X, Upload, RefreshCw, AlertCircle, Video, Clock, Image as ImageIcon, Maximize, PlayCircle, Settings2, Save, Layers, Link as LinkIcon, Sparkles, Zap, Star, Trophy, Flame, Crown } from 'lucide-react';
+import { Plus, Gift as GiftIcon, Edit3, Trash2, Wand2, X, Upload, RefreshCw, AlertCircle, Video, Clock, Image as ImageIcon, Maximize, PlayCircle, Settings2, Save, Layers, Link as LinkIcon, Sparkles, Zap, Star, Trophy, Flame, Crown, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gift, GiftAnimationType, GiftDisplaySize } from '../../types';
 import { db } from '../../services/firebase';
@@ -50,6 +49,7 @@ const AdminGifts: React.FC<AdminGiftsProps> = ({ gifts, onSaveGift, handleFileUp
   };
 
   const animationTypes: { id: GiftAnimationType; label: string; icon: any }[] = [
+    { id: 'none', label: 'بدون تأثير', icon: EyeOff },
     { id: 'pop', label: 'ظهور عادي', icon: Zap },
     { id: 'full-screen', label: 'ملء الشاشة', icon: Maximize },
     { id: 'fly', label: 'طيران', icon: Sparkles },
@@ -63,7 +63,7 @@ const AdminGifts: React.FC<AdminGiftsProps> = ({ gifts, onSaveGift, handleFileUp
     { id: 'medium', label: 'متوسط' },
     { id: 'large', label: 'كبير' },
     { id: 'full', label: 'كامل' },
-    { id: 'max', label: 'أقصى حجم' }
+    { id: 'max', label: 'ملء الشاشة' }
   ];
 
   const categories: { id: Gift['category']; label: string; icon: any }[] = [
@@ -150,7 +150,7 @@ const AdminGifts: React.FC<AdminGiftsProps> = ({ gifts, onSaveGift, handleFileUp
                           ) : <Video className="text-slate-700" size={32} />}
                           <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center cursor-pointer transition-all">
                              {isUploadingContent ? <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div> : <><Upload size={24} className="text-white" /><span className="text-[10px] text-white mt-1">رفع الملف</span></>}
-                             <input type="file" accept="*" className="hidden" onChange={(e) => { setIsUploadingContent(true); handleFileUpload(e, (url) => { setEditingGift({...editingGift, icon: url}); setIsUploadingContent(false); }, 800, 800); }} />
+                             <input type="file" accept="*" className="hidden" onChange={(e) => { setIsUploadingContent(true); handleFileUpload(e, (url) => { setEditingGift({...editingGift, icon: url}); setIsUploadingContent(false); }, 1080, 1920); }} />
                           </label>
                        </div>
                        <input type="text" value={editingGift.icon || ''} onChange={e => setEditingGift({...editingGift, icon: e.target.value})} placeholder="رابط الأنميشن المباشر..." className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-5 text-[10px] text-emerald-400 outline-none" />

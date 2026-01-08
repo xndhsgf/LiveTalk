@@ -4,14 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../../services/firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { User, GiftDisplaySize } from '../../types';
-import { Sparkles, Crown } from 'lucide-react';
 
 interface GiftEvent {
   id: string;
   giftId: string;
   giftName: string;
   giftIcon: string;
-  giftAnimation: string;
+  giftAnimation: string; // 'none', 'pop', 'full-screen', etc.
   senderId: string;
   senderName: string;
   senderAvatar: string;
@@ -29,7 +28,7 @@ interface GiftAnimationLayerProps {
   onActiveChange?: (active: boolean) => void;
 }
 
-const SmartVideoPlayer = ({ src, objectFit }: { src: string, objectFit: string }) => {
+const FullScreenVideoPlayer = ({ src, onEnded }: { src: string, onEnded?: () => void }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -37,7 +36,7 @@ const SmartVideoPlayer = ({ src, objectFit }: { src: string, objectFit: string }
     if (!video) return;
 
     video.muted = false;
-    video.volume = 0.7;
+    video.volume = 1.0;
     video.play().catch(err => {
       console.warn("Autoplay blocked, trying muted", err);
       video.muted = true;
@@ -51,7 +50,8 @@ const SmartVideoPlayer = ({ src, objectFit }: { src: string, objectFit: string }
       src={src} 
       autoPlay
       playsInline
-      className={`w-full h-full ${objectFit} pointer-events-none shadow-2xl`}
+      onEnded={onEnded}
+      className="absolute inset-0 w-full h-full object-cover pointer-events-none z-[5000]"
     />
   );
 };
@@ -78,11 +78,14 @@ export const GiftAnimationLayer = forwardRef((props: GiftAnimationLayerProps, re
 
     setActiveAnimations(prev => [...prev, event]);
     
+    // إذا كان هناك مدة محددة للهدية نستخدمها، وإلا 5 ثوانٍ افتراضية
     const displayDuration = (event.duration || 5) * 1000;
     
+    // إزالة الهدية بعد انتهاء المدة
     setTimeout(() => {
       setActiveAnimations(prev => prev.filter(a => a.id !== event.id));
-      setTimeout(() => playedIds.current.delete(event.id), 5000);
+      // تنظيف المعرف بعد فترة لضمان عدم التكرار المباشر
+      setTimeout(() => playedIds.current.delete(event.id), 10000);
     }, displayDuration);
   };
 
@@ -113,76 +116,77 @@ export const GiftAnimationLayer = forwardRef((props: GiftAnimationLayerProps, re
   }, [roomId, currentUserId]);
 
   return (
-    <div className="absolute inset-0 z-[1000] pointer-events-none overflow-hidden">
+    <div className="fixed inset-0 z-[5000] pointer-events-none overflow-hidden">
       <AnimatePresence>
         {activeAnimations.map((event) => {
           const isFullScreen = event.giftAnimation === 'full-screen' || event.displaySize === 'full' || event.displaySize === 'max';
-          
+          const isNoAnim = event.giftAnimation === 'none';
+
+          // حالة ملء الشاشة (التأثير المطلوب بالصورة)
           if (isFullScreen) {
             return (
               <motion.div
                 key={event.id}
-                initial={{ opacity: 0, scale: 1.2 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.5 }}
-                className="absolute inset-0 flex items-center justify-center z-[2000]"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="absolute inset-0 w-full h-full z-[5000]"
               >
-                {/* خلفية معتمة خفيفة جداً للهدايا الكبيرة */}
-                <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]" />
-                
-                <div className="relative w-full h-full flex flex-col items-center justify-center">
-                  {/* حاوية الهدية */}
-                  <div className="w-full h-full relative">
-                    {isVideoUrl(event.giftIcon) ? (
-                      <SmartVideoPlayer src={event.giftIcon} objectFit="object-contain" />
-                    ) : (
-                      <motion.img 
-                        animate={{ 
-                          scale: [1, 1.05, 1],
-                          y: [0, -20, 0]
-                        }}
-                        transition={{ repeat: Infinity, duration: 3 }}
-                        src={event.giftIcon} 
-                        className="w-full h-full object-contain filter drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)]" 
-                      />
-                    )}
-                  </div>
-                  {/* تم إزالة بطاقة تعريف المرسل (المربع الأصفر) من هنا بناءً على طلب المستخدم لترك الشاشة للهدية فقط */}
-                </div>
+                {isVideoUrl(event.giftIcon) ? (
+                  <FullScreenVideoPlayer 
+                    src={event.giftIcon} 
+                    onEnded={() => setActiveAnimations(prev => prev.filter(a => a.id !== event.id))}
+                  />
+                ) : (
+                  <img 
+                    src={event.giftIcon} 
+                    className="w-full h-full object-cover" 
+                    alt="Full Screen Gift"
+                  />
+                )}
               </motion.div>
             );
           }
 
-          // الهدايا العادية (تأثير ظهور من الأسفل مع ارتداد)
+          // حالة "بدون تأثير" للهدايا الفيديو (تظهر وتختفي بمجرد انتهاء الفيديو أو المدة)
+          if (isNoAnim) {
+            return (
+              <div key={event.id} className="absolute inset-0 w-full h-full z-[5000]">
+                 {isVideoUrl(event.giftIcon) ? (
+                   <video 
+                     src={event.giftIcon} 
+                     autoPlay 
+                     playsInline 
+                     className="w-full h-full object-cover pointer-events-none"
+                     onEnded={() => setActiveAnimations(prev => prev.filter(a => a.id !== event.id))}
+                   />
+                 ) : (
+                   <img src={event.giftIcon} className="w-full h-full object-contain" />
+                 )}
+              </div>
+            );
+          }
+
+          // الهدايا العادية (تأثير البوب العادي في منتصف الشاشة)
           return (
             <motion.div 
               key={event.id}
-              initial={{ opacity: 0, scale: 0.3, y: 100 }}
-              animate={{ 
-                opacity: [0, 1, 1, 0], 
-                scale: [0.3, 1.1, 1, 1.2],
-                y: [100, 0, 0, -50]
-              }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 3, ease: "easeOut" }}
-              className="absolute inset-0 flex items-center justify-center"
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.5 }}
+              className="absolute inset-0 flex items-center justify-center z-[4000]"
             >
-              <div className="relative w-64 h-64 flex items-center justify-center">
+              <div className="relative w-72 h-72 flex items-center justify-center">
                 {isVideoUrl(event.giftIcon) ? (
                   <video src={event.giftIcon} autoPlay playsInline muted className="w-full h-full object-contain" />
                 ) : (
                   <img src={event.giftIcon} className="w-full h-full object-contain filter drop-shadow-2xl" />
                 )}
-                
                 {event.quantity > 1 && (
-                  <motion.div 
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1.2 }}
-                    className="absolute -right-4 top-0 bg-gradient-to-b from-yellow-300 to-orange-600 text-white font-black text-4xl px-4 py-1 rounded-2xl shadow-xl border-2 border-white italic"
-                  >
+                  <div className="absolute -right-4 top-0 bg-yellow-500 text-black font-black text-4xl px-4 py-1 rounded-2xl border-2 border-white shadow-xl italic">
                     X{event.quantity}
-                  </motion.div>
+                  </div>
                 )}
               </div>
             </motion.div>
