@@ -1,16 +1,16 @@
 
 import React, { useState } from 'react';
-import { Smartphone, Camera, Image as ImageIcon, Edit3, Save } from 'lucide-react';
+import { Smartphone, Camera, Image as ImageIcon, Edit3, Save, AlertCircle } from 'lucide-react';
 
 interface AdminIdentityProps {
   appLogo: string;
   appBanner: string;
   appName: string;
-  authBackground: string; // إضافة الخلفية
+  authBackground: string; 
   onUpdateAppLogo: (url: string) => void;
   onUpdateAppBanner: (url: string) => void;
   onUpdateAppName: (name: string) => void;
-  onUpdateAuthBackground: (url: string) => void; // دالة التحديث
+  onUpdateAuthBackground: (url: string) => void; 
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>, callback: (url: string) => void, w: number, h: number) => void;
 }
 
@@ -33,6 +33,13 @@ const AdminIdentity: React.FC<AdminIdentityProps> = ({
       <h3 className="text-2xl font-black text-white flex items-center gap-3">
         <Smartphone className="text-emerald-500 ml-2"/> هوية التطبيق والبراند
       </h3>
+
+      <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-2xl flex items-center gap-3 mb-6">
+        <AlertCircle className="text-amber-500 shrink-0" size={20} />
+        <p className="text-[10px] text-amber-200 font-bold leading-relaxed">
+          ملاحظة: يتم رفع بنرات الواجهة الرئيسية حالياً من قسم <b>"الأنشطة والفعاليات"</b> لضمان ربطها بفعاليات نشطة وتفاعلية.
+        </p>
+      </div>
 
       {/* قسم اسم التطبيق */}
       <div className="bg-slate-950/60 p-8 rounded-[2.5rem] border border-white/10 space-y-6">
@@ -73,22 +80,10 @@ const AdminIdentity: React.FC<AdminIdentityProps> = ({
           </div>
         </div>
 
-        {/* بنر الواجهة */}
+        {/* خلفية صفحة الدخول */}
         <div className="bg-slate-950/60 p-8 rounded-[2.5rem] border border-white/10 space-y-4 text-center">
-          <label className="text-xs font-black text-slate-500 uppercase block mb-2">بنر الواجهة (Banner)</label>
-          <div className="relative h-32 w-full rounded-2xl overflow-hidden border-2 border-dashed border-white/10 flex items-center justify-center bg-black/40 group">
-            <img src={appBanner} className="w-full h-full object-cover group-hover:opacity-40" />
-            <label className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer">
-              <ImageIcon size={24} className="text-white" />
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, onUpdateAppBanner, 800, 300)} />
-            </label>
-          </div>
-        </div>
-
-        {/* خلفية صفحة الدخول - ميزة جديدة */}
-        <div className="bg-slate-950/60 p-8 rounded-[2.5rem] border border-white/10 space-y-4 text-center md:col-span-2">
           <label className="text-xs font-black text-slate-500 uppercase block mb-2">خلفية صفحة الدخول (Full Background)</label>
-          <div className="relative h-44 w-full rounded-[2rem] overflow-hidden border-2 border-dashed border-white/10 flex items-center justify-center bg-black/40 group">
+          <div className="relative h-32 w-full rounded-2xl overflow-hidden border-2 border-dashed border-white/10 flex items-center justify-center bg-black/40 group">
             {authBackground ? (
               <img src={authBackground} className="w-full h-full object-cover group-hover:opacity-40" />
             ) : (
@@ -96,11 +91,9 @@ const AdminIdentity: React.FC<AdminIdentityProps> = ({
             )}
             <label className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer">
               <Camera size={32} className="text-white" />
-              <div className="bg-black/60 px-4 py-2 rounded-xl text-[10px] font-black text-white ml-2">تغيير الخلفية</div>
               <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, onUpdateAuthBackground, 1200, 800)} />
             </label>
           </div>
-          <p className="text-[9px] text-slate-500 font-bold">يفضل رفع صور ذات أبعاد كبيرة أو صور متحركة GIF للحصول على أفضل مظهر.</p>
         </div>
       </div>
     </div>

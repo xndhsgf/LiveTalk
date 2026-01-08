@@ -25,7 +25,7 @@ export const EconomyEngine = {
       
       const expiresAt = itemMetadata.ownershipDays > 0 
         ? now + (itemMetadata.ownershipDays * 24 * 60 * 60 * 1000) 
-        : null;
+        : now + (30 * 24 * 60 * 60 * 1000); // افتراضي 30 يوم
 
       newItemForState = {
         id: instanceId, 
@@ -34,14 +34,22 @@ export const EconomyEngine = {
         type: itemMetadata.type,
         url: itemMetadata.url,
         expiresAt: expiresAt,
-        duration: itemMetadata.duration || 6, // حفظ مدة الأنميشن
+        duration: itemMetadata.duration || 6,
         price: itemMetadata.price || 0
       };
 
       // تقليم المصفوفة المحلية لمنع تضخم الحالة
       const updatedEarned = [...(Array.isArray(currentEarnedItems) ? currentEarnedItems : []), newItemForState];
-      localUpdate.earnedItems = updatedEarned.slice(-12);
+      localUpdate.earnedItems = updatedEarned.slice(-15);
       
+      // ارتداء فوري عند الشراء
+      if (itemMetadata.type === 'frame') localUpdate.frame = itemMetadata.url;
+      if (itemMetadata.type === 'bubble') localUpdate.activeBubble = itemMetadata.url;
+      if (itemMetadata.type === 'entry') {
+        localUpdate.activeEntry = itemMetadata.url;
+        localUpdate.activeEntryDuration = itemMetadata.duration || 6;
+      }
+
       if (!currentOwnedItems.includes(itemId)) {
         localUpdate.ownedItems = [...currentOwnedItems, itemId];
       }
@@ -55,18 +63,22 @@ export const EconomyEngine = {
       const userRef = doc(db, 'users', userId);
       
       const firestoreUpdate: any = { 
+        ...localUpdate,
         coins: increment(-cost), 
         wealth: increment(cost) 
       };
       
+      // نستخدم الـ increment للقيم المالية لتجنب مشاكل التزامن
+      delete firestoreUpdate.coins;
+      delete firestoreUpdate.wealth;
+      
       if (itemId) firestoreUpdate.ownedItems = arrayUnion(itemId);
       
-      // لا نستخدم arrayUnion هنا إذا أردنا التقليم، بل نقوم بتحديث المصفوفة كاملة بعد التقليم
-      if (newItemForState) {
-        firestoreUpdate.earnedItems = localUpdate.earnedItems;
-      }
-      
-      await updateDoc(userRef, firestoreUpdate);
+      await updateDoc(userRef, {
+        ...firestoreUpdate,
+        coins: increment(-cost),
+        wealth: increment(cost)
+      });
       return true;
     } catch (e: any) { 
       console.error("Economy Database Error:", e);
@@ -80,12 +92,16 @@ export const EconomyEngine = {
     const cost = Number(vip.cost || 0);
     if (coins < cost) return false;
 
+    const now = Date.now();
+    const expiresAt = now + (30 * 24 * 60 * 60 * 1000); // تفعيل لمدة 30 يوم
+
     updateLocalState({ 
       isVip: true, 
       vipLevel: vip.level, 
       coins: coins - cost, 
       wealth: Number(currentWealth || 0) + cost, 
-      frame: vip.frameUrl 
+      frame: vip.frameUrl,
+      vipExpiresAt: expiresAt
     });
 
     try {
@@ -95,7 +111,8 @@ export const EconomyEngine = {
         vipLevel: vip.level, 
         coins: increment(-cost), 
         wealth: increment(cost), 
-        frame: vip.frameUrl 
+        frame: vip.frameUrl,
+        vipExpiresAt: expiresAt
       });
       return true;
     } catch (e) { return false; }

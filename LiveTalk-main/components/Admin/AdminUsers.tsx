@@ -62,7 +62,6 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ users, vipLevels, onUpdateUser,
     u.id.includes(searchQuery)
   );
 
-  // دالة للتحقق هل المستخدم المختار هو المدير العام
   const isTargetRoot = (user: User) => {
     return (user as any).email?.toLowerCase() === ROOT_ADMIN_EMAIL.toLowerCase() || user.customId?.toString() === '1';
   };
@@ -91,7 +90,6 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ users, vipLevels, onUpdateUser,
   const handleSave = async () => {
     if (!selectedUser) return;
     
-    // منع المشرف من تعديل حساب المدير
     if (!isRootAdmin && isTargetRoot(selectedUser)) {
       alert('غير مسموح للمشرفين بتعديل بيانات الإدارة العليا');
       return;
@@ -128,7 +126,6 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ users, vipLevels, onUpdateUser,
         qSnap.forEach(async (d) => { await deleteDoc(d.ref); });
       }
 
-      // فقط المدير العام يستطيع تعيين مشرفين أو تعديل صلاحياتهم
       if (isRootAdmin) {
         updates.isSystemModerator = editingFields.isSystemModerator;
         updates.moderatorPermissions = editingFields.moderatorPermissions;
@@ -184,7 +181,6 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ users, vipLevels, onUpdateUser,
           <div className="fixed inset-0 z-[1500] flex items-center justify-center p-3 bg-black/90 backdrop-blur-md">
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-[#0f172a] border border-white/10 rounded-[2rem] w-full max-w-sm shadow-2xl overflow-hidden flex flex-col max-h-[92vh] relative">
                
-               {/* أزرار التحكم العلوية */}
                <div className="absolute top-3 right-3 z-20">
                  <button onClick={() => setSelectedUser(null)} className="p-2 bg-black/40 backdrop-blur-md text-white rounded-full hover:bg-black/60 transition-all active:scale-90 border border-white/10 shadow-lg">
                     <X size={20} />
@@ -214,8 +210,6 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ users, vipLevels, onUpdateUser,
                </div>
 
                <div className="flex-1 overflow-y-auto p-4 pt-8 space-y-4 scrollbar-hide">
-                  
-                  {/* تحذير في حال محاولة تعديل حساب المدير من قبل مشرف */}
                   {!isRootAdmin && isTargetRoot(selectedUser) ? (
                     <div className="bg-amber-500/10 border border-amber-500/20 p-6 rounded-3xl flex flex-col items-center text-center gap-3">
                        <Lock size={40} className="text-amber-500" />
@@ -224,7 +218,6 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ users, vipLevels, onUpdateUser,
                     </div>
                   ) : (
                     <>
-                      {/* قسم الحظر */}
                       <div className="p-3 bg-red-600/5 rounded-2xl border border-red-600/20 space-y-3">
                         <h4 className="text-[9px] font-black text-red-500 flex items-center gap-1 uppercase tracking-widest">
                            <ShieldAlert size={12} /> الحظر المتقدم
@@ -246,7 +239,6 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ users, vipLevels, onUpdateUser,
                         </div>
                       </div>
 
-                      {/* التحكم المالي والفي اي بي */}
                       <div className="grid grid-cols-2 gap-3">
                          <div className="space-y-1">
                             <label className="text-[8px] font-black text-slate-500 pr-1 uppercase"><Coins size={8} className="inline ml-1" /> الكوينز</label>
@@ -261,7 +253,6 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ users, vipLevels, onUpdateUser,
                          </div>
                       </div>
 
-                      {/* أمان الحساب */}
                       <div className="p-3 bg-white/5 rounded-2xl border border-white/5 space-y-3">
                         <div className="space-y-1">
                            <label className="text-[8px] font-black text-slate-500 pr-1">تغيير الـ ID</label>
@@ -279,7 +270,6 @@ const AdminUsers: React.FC<AdminUsersProps> = ({ users, vipLevels, onUpdateUser,
                         </div>
                       </div>
 
-                      {/* صلاحيات الإدارة - تظهر فقط للمدير العام */}
                       {isRootAdmin && (
                         <div className="p-3 bg-blue-600/5 rounded-2xl border border-blue-500/20 space-y-3">
                           <div className="flex items-center justify-between">

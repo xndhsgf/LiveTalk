@@ -143,10 +143,8 @@ export default function App() {
 
   const canAccessAdmin = useMemo(() => isRootAdmin || user?.isSystemModerator, [isRootAdmin, user?.isSystemModerator]);
 
-  // --- ميزة التحكم بـ "زر الرجوع" للجوال ---
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
-      // إذا ضغط المستخدم رجوع، نقوم بإغلاق أي نافذة مفتوحة بدلاً من الرجوع للصفحة السابقة
       if (activeGame) { setActiveGame(null); return; }
       if (showProfileSheet) { setShowProfileSheet(false); return; }
       if (showGlobalLeaderboard) { setShowGlobalLeaderboard(false); return; }
@@ -163,7 +161,6 @@ export default function App() {
       if (showHostAgentDashboard) { setShowHostAgentDashboard(false); return; }
       if (privateChatPartner) { setPrivateChatPartner(null); return; }
       
-      // إذا كان في غرفة، نقوم بتصغيرها أولاً عند ضغط رجوع
       if (currentRoom && !isRoomMinimized) {
         setIsRoomMinimized(true);
         return;
@@ -179,7 +176,6 @@ export default function App() {
     privateChatPartner, currentRoom, isRoomMinimized
   ]);
 
-  // دالة مساعدة لدفع حالة جديدة للتاريخ عند فتح أي شيء
   const pushNewState = () => {
     window.history.pushState({ modalOpen: true }, '');
   };
@@ -292,13 +288,13 @@ export default function App() {
   }, []);
 
   const allBanners = useMemo(() => {
+    // تم إلغاء استخدام appBanner الأساسي بناءً على الطلب ليكون الرفع من النشاط فقط
     const banners: { url: string; activity?: Activity }[] = [];
-    if (appBanner) banners.push({ url: appBanner });
     activities.forEach(act => {
-      banners.push({ url: act.bannerUrl, activity: act });
+      if (act.bannerUrl) banners.push({ url: act.bannerUrl, activity: act });
     });
     return banners;
-  }, [appBanner, activities]);
+  }, [activities]);
 
   useEffect(() => {
     if (allBanners.length <= 1) return;
@@ -458,35 +454,39 @@ export default function App() {
                 </div>
               </div>
               
-              <div className="relative w-full h-32 rounded-2xl overflow-hidden bg-slate-800 border border-white/5 shadow-xl touch-pan-y">
-                 <AnimatePresence mode="wait">
-                    <motion.div 
-                      key={currentBannerIndex} 
-                      initial={{ opacity: 0, x: 100 }} 
-                      animate={{ opacity: 1, x: 0 }} 
-                      exit={{ opacity: 0, x: -100 }} 
-                      transition={{ duration: 0.4, ease: "easeInOut" }}
-                      drag="x"
-                      dragConstraints={{ left: 0, right: 0 }}
-                      onDragEnd={(e, info) => {
-                        if (allBanners.length <= 1) return;
-                        const threshold = 50;
-                        if (info.offset.x < -threshold) {
-                          setCurrentBannerIndex((prev) => (prev + 1) % allBanners.length);
-                        } else if (info.offset.x > threshold) {
-                          setCurrentBannerIndex((prev) => (prev - 1 + allBanners.length) % allBanners.length);
-                        }
-                      }}
-                      className="w-full h-full cursor-pointer relative touch-none" 
-                      onClick={() => { const b = allBanners[currentBannerIndex]; if (b?.activity) { pushNewState(); setActiveActivity(b.activity); setShowActivityModal(true); } }}
-                    >
-                       <img src={allBanners[currentBannerIndex]?.url} className="w-full h-full object-cover pointer-events-none" alt="Banner" />
-                    </motion.div>
-                 </AnimatePresence>
-                 <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                    {allBanners.map((_, i) => (<div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${currentBannerIndex === i ? 'w-4 bg-amber-500' : 'w-1.5 bg-white/30'}`} />))}
-                 </div>
-              </div>
+              {allBanners.length > 0 && (
+                <div className="relative w-full h-32 rounded-2xl overflow-hidden bg-slate-800 border border-white/5 shadow-xl touch-pan-y">
+                   <AnimatePresence mode="wait">
+                      <motion.div 
+                        key={currentBannerIndex} 
+                        initial={{ opacity: 0, x: 100 }} 
+                        animate={{ opacity: 1, x: 0 }} 
+                        exit={{ opacity: 0, x: -100 }} 
+                        transition={{ duration: 0.4, ease: "easeInOut" }}
+                        drag={allBanners.length > 1 ? "x" : false}
+                        dragConstraints={{ left: 0, right: 0 }}
+                        onDragEnd={(e, info) => {
+                          if (allBanners.length <= 1) return;
+                          const threshold = 50;
+                          if (info.offset.x < -threshold) {
+                            setCurrentBannerIndex((prev) => (prev + 1) % allBanners.length);
+                          } else if (info.offset.x > threshold) {
+                            setCurrentBannerIndex((prev) => (prev - 1 + allBanners.length) % allBanners.length);
+                          }
+                        }}
+                        className="w-full h-full cursor-pointer relative touch-none" 
+                        onClick={() => { const b = allBanners[currentBannerIndex]; if (b?.activity) { pushNewState(); setActiveActivity(b.activity); setShowActivityModal(true); } }}
+                      >
+                         <img src={allBanners[currentBannerIndex]?.url} className="w-full h-full object-cover pointer-events-none" alt="Banner" />
+                      </motion.div>
+                   </AnimatePresence>
+                   {allBanners.length > 1 && (
+                     <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                        {allBanners.map((_, i) => (<div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${currentBannerIndex === i ? 'w-4 bg-amber-500' : 'w-1.5 bg-white/30'}`} />))}
+                     </div>
+                   )}
+                </div>
+              )}
 
               <div className="flex justify-between items-center px-1"><h2 className="text-xs font-bold text-white flex items-center gap-1.5"><Flame size={14} className="text-orange-500" /> {t.activeRooms}</h2><button onClick={() => { pushNewState(); setShowGlobalLeaderboard(true); }} className="bg-gradient-to-r from-amber-500 to-orange-600 p-2 rounded-xl border border-amber-400/30"><Trophy size={18} className="text-white" fill="currentColor" /></button></div>
               <div className="grid gap-2.5">{rooms.map(room => ( <RoomCard key={room.id} room={room} onClick={handleRoomJoin} /> ))}</div>

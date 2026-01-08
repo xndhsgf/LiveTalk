@@ -103,6 +103,7 @@ export interface User {
   charm: any;
   isVip: boolean;
   vipLevel?: number;
+  vipExpiresAt?: number; // تاريخ انتهاء الـ VIP
   nameStyle?: string;
   idColor?: string; 
   bio?: string;

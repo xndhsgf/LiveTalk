@@ -45,6 +45,8 @@ const AdminActivities: React.FC<AdminActivitiesProps> = ({ gifts, handleFileUplo
       status: editingActivity.status || 'active',
       rewards: editingActivity.rewards || [],
       createdAt: serverTimestamp(),
+      // Ensure we have at least a default end date if none is set
+      endDate: editingActivity.endDate || Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
     };
 
     try {
@@ -85,9 +87,21 @@ const AdminActivities: React.FC<AdminActivitiesProps> = ({ gifts, handleFileUplo
     setEditingActivity({ ...editingActivity, rewards });
   };
 
+  // Helper to safely format Firestore timestamp for datetime-local input
+  const getFormattedDate = (ts?: any) => {
+    if (!ts) return '';
+    try {
+      const date = ts.toDate ? ts.toDate() : new Date(ts);
+      if (isNaN(date.getTime())) return '';
+      return date.toISOString().slice(0, 16);
+    } catch (e) {
+      return '';
+    }
+  };
+
   return (
     <div className="space-y-10 text-right font-cairo" dir="rtl">
-      <div className="bg-slate-950/40 p-8 rounded-[3rem] border border-white/10 shadow-2xl flex flex-col md:flex-row justify-between items-center gap-6">
+      <div className="bg-slate-950/40 p-8 rounded-[2.5rem] border border-white/10 shadow-2xl flex flex-col md:flex-row justify-between items-center gap-6">
         <div>
           <h3 className="text-2xl font-black text-white flex items-center gap-3">
             <div className="p-3 bg-amber-500 rounded-2xl shadow-lg shadow-amber-900/40"><ActivityIcon className="text-black" /></div>
@@ -96,7 +110,7 @@ const AdminActivities: React.FC<AdminActivitiesProps> = ({ gifts, handleFileUplo
           <p className="text-slate-500 text-xs font-bold mt-2 pr-1">تحكم في بنرات الأنشطة، الجوائز، وتوقيت الفعاليات.</p>
         </div>
         <button 
-          onClick={() => setEditingActivity({ title: '', bannerUrl: '', backgroundUrl: '', type: 'gift_event', rewards: [], status: 'active' })}
+          onClick={() => setEditingActivity({ title: '', bannerUrl: '', backgroundUrl: '', type: 'gift_event', rewards: [], status: 'active', endDate: Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)) })}
           className="px-10 py-5 bg-gradient-to-r from-amber-500 to-orange-600 text-black rounded-[1.5rem] font-black text-xs shadow-xl active:scale-95 flex items-center gap-3 transition-all"
         >
           <Plus size={20} strokeWidth={3} /> إنشاء فعالية جديدة
@@ -155,7 +169,17 @@ const AdminActivities: React.FC<AdminActivitiesProps> = ({ gifts, handleFileUplo
                     </div>
                     <div className="space-y-2">
                        <label className="text-[10px] font-black text-slate-500 uppercase pr-2">تاريخ الانتهاء</label>
-                       <input type="datetime-local" value={editingActivity.endDate ? new Date(editingActivity.endDate.seconds * 1000).toISOString().slice(0, 16) : ''} onChange={e => setEditingActivity({...editingActivity, endDate: Timestamp.fromDate(new Date(e.target.value))})} className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-6 text-white font-black outline-none focus:border-amber-500/50" />
+                       <input 
+                         type="datetime-local" 
+                         value={getFormattedDate(editingActivity.endDate)} 
+                         onChange={e => {
+                            const val = e.target.value;
+                            if (val) {
+                              setEditingActivity({...editingActivity, endDate: Timestamp.fromDate(new Date(val))});
+                            }
+                         }} 
+                         className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-6 text-white font-black outline-none focus:border-amber-500/50" 
+                       />
                     </div>
                  </div>
 

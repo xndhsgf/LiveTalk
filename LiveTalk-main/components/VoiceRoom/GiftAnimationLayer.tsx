@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../../services/firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { User, GiftDisplaySize } from '../../types';
+import { Sparkles, Crown } from 'lucide-react';
 
 interface GiftEvent {
   id: string;
@@ -30,62 +31,28 @@ interface GiftAnimationLayerProps {
 
 const SmartVideoPlayer = ({ src, objectFit }: { src: string, objectFit: string }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const playPromiseRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    const startVideo = async () => {
-      try {
-        video.muted = true;
-        if (playPromiseRef.current) {
-          await playPromiseRef.current;
-        }
-        playPromiseRef.current = video.play();
-        await playPromiseRef.current;
-        
-        setTimeout(() => {
-          if (video) {
-            video.muted = false;
-            video.volume = 0.5;
-          }
-        }, 100);
-      } catch (err) {
-        console.warn("Video sound playback blocked by browser", err);
-      }
-    };
-
-    startVideo();
-
-    return () => {
-      if (video) {
-        video.pause();
-        video.src = "";
-        video.load();
-      }
-    };
+    video.muted = false;
+    video.volume = 0.7;
+    video.play().catch(err => {
+      console.warn("Autoplay blocked, trying muted", err);
+      video.muted = true;
+      video.play();
+    });
   }, [src]);
 
   return (
-    <div className="w-full h-full relative flex items-center justify-center bg-transparent overflow-hidden pointer-events-none">
-      <video 
-        ref={videoRef}
-        key={src}
-        src={src} 
-        autoPlay
-        playsInline
-        webkit-playsinline="true"
-        preload="auto"
-        disablePictureInPicture
-        disableRemotePlayback
-        className={`w-full h-full ${objectFit} pointer-events-none`}
-        style={{ 
-          pointerEvents: 'none',
-          backgroundColor: 'transparent'
-        }}
-      />
-    </div>
+    <video 
+      ref={videoRef}
+      src={src} 
+      autoPlay
+      playsInline
+      className={`w-full h-full ${objectFit} pointer-events-none shadow-2xl`}
+    />
   );
 };
 
@@ -102,7 +69,7 @@ export const GiftAnimationLayer = forwardRef((props: GiftAnimationLayerProps, re
 
   const isVideoUrl = (url: string) => {
     if (!url) return false;
-    return url.match(/\.(mp4|webm|ogg|mov|m4v)$/i) || url.includes('video') || url.includes('mp4');
+    return url.match(/\.(mp4|webm|ogg|mov|m4v)$/i) || url.includes('video');
   };
 
   const triggerAnimation = (event: GiftEvent) => {
@@ -135,92 +102,88 @@ export const GiftAnimationLayer = forwardRef((props: GiftAnimationLayerProps, re
         if (change.type === "added") {
           const data = change.doc.data();
           const newEvent = { id: change.doc.id, ...data } as GiftEvent;
-          
           if (newEvent.senderId === currentUserId) return;
-          
           const now = Date.now();
           const eventTime = data.timestamp?.toMillis ? data.timestamp.toMillis() : now;
-          
-          if (now - eventTime < 10000) {
-            triggerAnimation(newEvent);
-          }
+          if (now - eventTime < 10000) triggerAnimation(newEvent);
         }
       });
     });
-
     return () => unsubscribe();
   }, [roomId, currentUserId]);
 
-  const getSizeClass = (size?: GiftDisplaySize) => {
-    switch (size) {
-      case 'small': return 'w-32 h-32';
-      case 'medium': return 'w-64 h-64';
-      case 'large': return 'w-[85vw] h-[85vw]';
-      case 'full': return 'w-full h-full';
-      case 'max': return 'w-full h-full';
-      default: return 'w-64 h-64';
-    }
-  };
-
-  const renderGiftContent = (icon: string, displaySize: GiftDisplaySize = 'medium') => {
-    if (!icon) return null;
-    
-    const isFull = displaySize === 'full' || displaySize === 'max';
-    const objectFit = isFull ? 'object-cover' : 'object-contain';
-
-    if (isVideoUrl(icon)) {
-      return <SmartVideoPlayer src={icon} objectFit={objectFit} />;
-    }
-
-    const isImage = icon.includes('http') || icon.includes('data:image') || icon.includes('base64');
-    if (isImage) {
-      return (
-        <img 
-          src={icon} 
-          className={`w-full h-full ${objectFit} pointer-events-none`} 
-          alt="" 
-        />
-      );
-    }
-    return <span className={`${isFull ? 'text-[200px]' : 'text-8xl'} drop-shadow-2xl pointer-events-none`}>{icon}</span>;
-  };
-
   return (
-    <div className="absolute inset-0 z-[800] pointer-events-none overflow-hidden">
+    <div className="absolute inset-0 z-[1000] pointer-events-none overflow-hidden">
       <AnimatePresence>
         {activeAnimations.map((event) => {
-          const displaySize = event.displaySize || 'medium';
-          const isFull = displaySize === 'full' || displaySize === 'max' || event.giftAnimation === 'full-screen';
+          const isFullScreen = event.giftAnimation === 'full-screen' || event.displaySize === 'full' || event.displaySize === 'max';
           
-          const sizeClass = getSizeClass(displaySize);
-          const showFullScreen = isFull;
-          
+          if (isFullScreen) {
+            return (
+              <motion.div
+                key={event.id}
+                initial={{ opacity: 0, scale: 1.2 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.5 }}
+                className="absolute inset-0 flex items-center justify-center z-[2000]"
+              >
+                {/* خلفية معتمة خفيفة جداً للهدايا الكبيرة */}
+                <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]" />
+                
+                <div className="relative w-full h-full flex flex-col items-center justify-center">
+                  {/* حاوية الهدية */}
+                  <div className="w-full h-full relative">
+                    {isVideoUrl(event.giftIcon) ? (
+                      <SmartVideoPlayer src={event.giftIcon} objectFit="object-contain" />
+                    ) : (
+                      <motion.img 
+                        animate={{ 
+                          scale: [1, 1.05, 1],
+                          y: [0, -20, 0]
+                        }}
+                        transition={{ repeat: Infinity, duration: 3 }}
+                        src={event.giftIcon} 
+                        className="w-full h-full object-contain filter drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)]" 
+                      />
+                    )}
+                  </div>
+                  {/* تم إزالة بطاقة تعريف المرسل (المربع الأصفر) من هنا بناءً على طلب المستخدم لترك الشاشة للهدية فقط */}
+                </div>
+              </motion.div>
+            );
+          }
+
+          // الهدايا العادية (تأثير ظهور من الأسفل مع ارتداد)
           return (
             <motion.div 
               key={event.id}
-              initial={showFullScreen ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.5, y: 50 }}
-              animate={showFullScreen ? { opacity: 1 } : { opacity: [0, 1, 1, 0], scale: [0.5, 1.1, 1, 1.2], y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ 
-                duration: showFullScreen ? 0 : 0.5,
-                ease: "linear"
+              initial={{ opacity: 0, scale: 0.3, y: 100 }}
+              animate={{ 
+                opacity: [0, 1, 1, 0], 
+                scale: [0.3, 1.1, 1, 1.2],
+                y: [100, 0, 0, -50]
               }}
-              className={`absolute inset-0 flex flex-col items-center justify-center pointer-events-none ${showFullScreen ? 'z-[1000]' : 'z-[800]'}`}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 3, ease: "easeOut" }}
+              className="absolute inset-0 flex items-center justify-center"
             >
-              <div className={`relative ${sizeClass} flex items-center justify-center overflow-hidden pointer-events-none`}>
-                 <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none">
-                    {renderGiftContent(event.giftIcon, displaySize)}
-                 </div>
-                 
-                 {!showFullScreen && event.quantity > 1 && (
-                    <motion.div 
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1.2 }}
-                      className="absolute -right-6 top-0 bg-gradient-to-b from-yellow-300 to-orange-600 text-white font-black text-5xl px-4 py-1 rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.6)] border-2 border-white italic z-20 pointer-events-none"
-                    >
-                       X{event.quantity}
-                    </motion.div>
-                 )}
+              <div className="relative w-64 h-64 flex items-center justify-center">
+                {isVideoUrl(event.giftIcon) ? (
+                  <video src={event.giftIcon} autoPlay playsInline muted className="w-full h-full object-contain" />
+                ) : (
+                  <img src={event.giftIcon} className="w-full h-full object-contain filter drop-shadow-2xl" />
+                )}
+                
+                {event.quantity > 1 && (
+                  <motion.div 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1.2 }}
+                    className="absolute -right-4 top-0 bg-gradient-to-b from-yellow-300 to-orange-600 text-white font-black text-4xl px-4 py-1 rounded-2xl shadow-xl border-2 border-white italic"
+                  >
+                    X{event.quantity}
+                  </motion.div>
+                )}
               </div>
             </motion.div>
           );

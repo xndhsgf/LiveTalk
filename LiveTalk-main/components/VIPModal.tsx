@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, Check, Crown, ArrowUpCircle, Coins } from 'lucide-react';
+import { X, Check, Crown, ArrowUpCircle, Coins, Clock } from 'lucide-react';
 import { VIPPackage, User } from '../types';
 
 interface VIPModalProps {
@@ -12,9 +12,17 @@ interface VIPModalProps {
 }
 
 const VIPModal: React.FC<VIPModalProps> = ({ user, vipLevels, onClose, onBuy }) => {
+  const getExpiresLabel = () => {
+    if (!user.vipExpiresAt) return null;
+    const diff = user.vipExpiresAt - Date.now();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    if (days <= 0) return 'تنتهي اليوم';
+    return `باقي ${days} يوم`;
+  };
+
   return (
     <div className="fixed inset-0 z-[180] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={onClose}></div>
+      <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" onClick={onClose}></div>
       
       <motion.div 
         initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -34,14 +42,22 @@ const VIPModal: React.FC<VIPModalProps> = ({ user, vipLevels, onClose, onBuy }) 
              مركز العضوية الملكية
           </h2>
           
-          <div className="mt-5 bg-black/60 rounded-2xl p-2.5 flex items-center justify-between px-6 border border-white/5">
-             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">رصيدك الحالي</span>
-             <div className="flex items-center gap-1.5">
-                <span className="font-black text-yellow-400 text-lg">
-                   {(user.coins ?? 0).toLocaleString()}
-                </span>
-                <Coins size={16} className="text-yellow-500" />
-             </div>
+          <div className="mt-5 flex flex-col gap-2">
+            <div className="bg-black/60 rounded-2xl p-2.5 flex items-center justify-between px-6 border border-white/5">
+               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">رصيدك الحالي</span>
+               <div className="flex items-center gap-1.5">
+                  <span className="font-black text-yellow-400 text-lg">
+                     {(Number(user.coins || 0)).toLocaleString()}
+                  </span>
+                  <Coins size={16} className="text-yellow-500" />
+               </div>
+            </div>
+            {user.isVip && user.vipExpiresAt && (
+               <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl py-2 px-4 flex items-center justify-center gap-2">
+                  <Clock size={12} className="text-amber-500" />
+                  <span className="text-[10px] font-black text-amber-200 uppercase tracking-widest">{getExpiresLabel()}</span>
+               </div>
+            )}
           </div>
         </div>
 
@@ -52,7 +68,6 @@ const VIPModal: React.FC<VIPModalProps> = ({ user, vipLevels, onClose, onBuy }) 
            ) : (
              vipLevels.sort((a,b) => a.level - b.level).map((vip) => {
                const isCurrentLevel = user.isVip && user.vipLevel === vip.level;
-               // تم تعديل المنطق: لا يوجد شيء اسمه مستوى "أعلى" يغلق البقية، الجميع متاح للشراء
                const canAfford = Number(user.coins || 0) >= vip.cost;
 
                return (
@@ -84,20 +99,20 @@ const VIPModal: React.FC<VIPModalProps> = ({ user, vipLevels, onClose, onBuy }) 
                          {isCurrentLevel ? (
                            <button 
                              onClick={() => {
-                               if(confirm(`ترغب في تجديد رتبة ${vip.name} مقابل ${vip.cost.toLocaleString()} كوينز؟`)) {
+                               if(confirm(`ترغب في تجديد رتبة ${vip.name} لمدة 30 يوماً إضافية مقابل ${vip.cost.toLocaleString()} كوينز؟`)) {
                                    onBuy(vip);
                                }
                              }}
                              className="px-4 py-2 bg-emerald-500/20 text-emerald-400 text-[10px] font-black rounded-xl flex flex-col items-center gap-0.5 border border-emerald-500/30 active:scale-95"
                            >
                               <span className="flex items-center gap-1"><Check size={12} strokeWidth={3} /> مفعّل</span>
-                              <span className="text-[8px] opacity-70">إعادة تفعيل</span>
+                              <span className="text-[8px] opacity-70">تجديد العضوية</span>
                            </button>
                          ) : (
                            <button 
                               disabled={!canAfford}
                               onClick={() => {
-                                  if(confirm(`تفعيل رتبة ${vip.name} مقابل ${vip.cost.toLocaleString()} كوينز؟`)) {
+                                  if(confirm(`تفعيل رتبة ${vip.name} لمدة 30 يوماً مقابل ${vip.cost.toLocaleString()} كوينز؟ سيتم ارتداء الإطار فوراً.`)) {
                                       onBuy(vip);
                                   }
                               }}

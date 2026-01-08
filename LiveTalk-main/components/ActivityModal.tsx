@@ -34,8 +34,8 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ isOpen, onClose, activity
       const userRef = doc(db, 'users', user.id);
       
       const now = Date.now();
-      const instanceId = `${reward.id}_${now}`;
-      const expiresAt = now + (30 * 24 * 60 * 60 * 1000); 
+      const expiresAt = now + (30 * 24 * 60 * 60 * 1000); // صلاحية 30 يوم
+      const instanceId = `${reward.id}_claim_${now}`;
       
       const newItem: StoreItem = {
         id: instanceId,
@@ -49,47 +49,49 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ isOpen, onClose, activity
         isFromActivity: true
       };
 
-      const updates: any = {};
+      const localUpdates: any = {};
       const currentEarned = Array.isArray(user.earnedItems) ? user.earnedItems : [];
       
-      // تقليم فوري للمصفوفة (الحد الأقصى 12 عنصراً)
-      const updatedEarned = [...currentEarned, newItem].slice(-12);
-      updates.earnedItems = updatedEarned;
+      // تقليم المصفوفة للحفاظ على الأداء
+      const updatedEarned = [...currentEarned, newItem].slice(-15);
+      localUpdates.earnedItems = updatedEarned;
 
-      if (reward.rewardType === 'frame') updates.frame = reward.rewardValue;
-      else if (reward.rewardType === 'entry') {
-        updates.activeEntry = reward.rewardValue;
-        updates.activeEntryDuration = 6;
-      }
-      else if (reward.rewardType === 'bubble') updates.activeBubble = reward.rewardValue;
-      else if (reward.rewardType === 'coins') {
-        updates.coins = Number(user.coins || 0) + Number(reward.rewardValue);
+      // منطق الارتداء الفوري وتحديث الرصيد
+      if (reward.rewardType === 'frame') {
+        localUpdates.frame = reward.rewardValue;
+      } else if (reward.rewardType === 'entry') {
+        localUpdates.activeEntry = reward.rewardValue;
+        localUpdates.activeEntryDuration = 6;
+      } else if (reward.rewardType === 'bubble') {
+        localUpdates.activeBubble = reward.rewardValue;
+      } else if (reward.rewardType === 'coins') {
+        localUpdates.coins = Number(user.coins || 0) + Number(reward.rewardValue);
       } else if (reward.rewardType === 'vip') {
-        updates.isVip = true;
-        updates.vipLevel = Number(reward.rewardValue);
+        localUpdates.isVip = true;
+        localUpdates.vipLevel = Number(reward.rewardValue);
+        // عند استلام VIP، نبحث عن إطار الرتبة المقابل ونرتديه فوراً
+        // ملاحظة: يُفترض أن رتب الـ VIP مخزنة في السيستم ببياناتها
+        localUpdates.frame = reward.rewardIconUrl || user.frame; 
       }
 
       // تجهيز بيانات Firebase
-      const firebaseUpdates: any = {};
+      const firestoreUpdates: any = {
+        ...localUpdates
+      };
+
+      // إذا كانت الجائزة مالية أو رتبة نستخدم التزايد، المقتنيات نحدث المصفوفة كاملة
       if (reward.rewardType === 'coins') {
-        firebaseUpdates.coins = increment(Number(reward.rewardValue));
+        firestoreUpdates.coins = increment(Number(reward.rewardValue));
+        delete firestoreUpdates.earnedItems; // لا نحتاج لإضافة كوينز للحقيبة
       } else if (reward.rewardType === 'vip') {
-        firebaseUpdates.isVip = true;
-        firebaseUpdates.vipLevel = Number(reward.rewardValue);
+        // الـ VIP يحدث الحقول مباشرة
       } else {
-        // نحدث المصفوفة كاملة مقلمة بدلاً من arrayUnion لتجنب التضخم
-        firebaseUpdates.earnedItems = updatedEarned;
-        
-        if (reward.rewardType === 'frame') firebaseUpdates.frame = reward.rewardValue;
-        if (reward.rewardType === 'bubble') firebaseUpdates.activeBubble = reward.rewardValue;
-        if (reward.rewardType === 'entry') {
-           firebaseUpdates.activeEntry = reward.rewardValue;
-           firebaseUpdates.activeEntryDuration = 6;
-        }
+        firestoreUpdates.earnedItems = updatedEarned;
       }
 
-      await updateDoc(userRef, firebaseUpdates);
+      await updateDoc(userRef, firestoreUpdates);
       
+      // تحديث حالة الاستلام في الفعالية
       const updatedRewards = activity.rewards.map(r => {
         if (r.id === reward.id) {
           return { ...r, claimedBy: [...(r.claimedBy || []), user.id] };
@@ -98,11 +100,11 @@ const ActivityModal: React.FC<ActivityModalProps> = ({ isOpen, onClose, activity
       });
       await updateDoc(activityRef, { rewards: updatedRewards });
 
-      onUpdateUser(updates);
-      alert(`تم استلام "${reward.rewardName}" بنجاح! ✅`);
+      onUpdateUser(localUpdates);
+      alert(`مبروك! تم استلام "${reward.rewardName}" وارتداؤه بنجاح ✅`);
     } catch (e: any) {
-      console.error("Claim Error:", e);
-      alert('حدث خطأ في حجم البيانات، يرجى التواصل مع الإدارة.');
+      console.error("Activity Reward Claim Error:", e);
+      alert('حدث خطأ أثناء الاستلام، يرجى المحاولة لاحقاً.');
     } finally {
       setIsProcessing(false);
     }

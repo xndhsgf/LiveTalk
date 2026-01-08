@@ -25,6 +25,7 @@ const BagModal: React.FC<BagModalProps> = ({ isOpen, onClose, user, onEquip }) =
     const now = Date.now();
     const items = Array.isArray(user.earnedItems) ? user.earnedItems : [];
     
+    // فلترة العناصر منتهية الصلاحية
     return items.filter(item => {
       if (item.expiresAt && item.expiresAt < now) return false;
       return true;
@@ -45,6 +46,17 @@ const BagModal: React.FC<BagModalProps> = ({ isOpen, onClose, user, onEquip }) =
     if (item.type === 'bubble') return user.activeBubble === item.url;
     if (item.type === 'entry') return user.activeEntry === item.url;
     return false;
+  };
+
+  const getTimeLeftLabel = (expiresAt?: number) => {
+    if (!expiresAt) return 'ملكية دائمة';
+    const diff = expiresAt - Date.now();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    
+    if (days > 0) return `${days} يوم متبقي`;
+    if (hours > 0) return `${hours} ساعة متبقية`;
+    return 'تنتهي قريباً';
   };
 
   return (
@@ -87,13 +99,13 @@ const BagModal: React.FC<BagModalProps> = ({ isOpen, onClose, user, onEquip }) =
              <div className="grid grid-cols-2 gap-4 pb-20">
                {filteredItems.map((item, idx) => {
                  const active = isEquipped(item);
-                 const timeLeft = item.expiresAt ? Math.ceil((item.expiresAt - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+                 const timeLabel = getTimeLeftLabel(item.expiresAt);
 
                  return (
                    <div key={item.id + idx} className={`relative rounded-[2.5rem] p-5 border transition-all duration-500 flex flex-col items-center gap-4 ${active ? 'bg-purple-600/10 border-purple-500/60 ring-1 ring-purple-500/20 shadow-[0_0_20px_rgba(168,85,247,0.1)]' : 'bg-slate-900/60 border-white/5'}`}>
-                      {timeLeft !== null && (
+                      {item.expiresAt && (
                         <div className="absolute top-3 left-3 bg-red-500/80 text-white text-[7px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-lg z-20">
-                           <Clock size={8} /> {timeLeft} يوم متبقي
+                           <Clock size={8} /> {timeLabel}
                         </div>
                       )}
 
@@ -142,7 +154,7 @@ const BagModal: React.FC<BagModalProps> = ({ isOpen, onClose, user, onEquip }) =
                       <div className="text-center w-full min-h-[32px]">
                          <h3 className="font-black text-[11px] text-white truncate px-2">{item.name}</h3>
                          <span className="text-[8px] text-slate-500 font-bold block mt-0.5 uppercase tracking-widest">
-                            {item.isFromActivity ? '🎁 جائزة نشاط' : '🛒 متجر فيفو'}
+                            {item.isFromActivity ? '🎁 جائزة فعالية' : '🛒 متجر فيفو'}
                          </span>
                       </div>
 
@@ -152,7 +164,7 @@ const BagModal: React.FC<BagModalProps> = ({ isOpen, onClose, user, onEquip }) =
                           active ? 'bg-red-600/10 text-red-500 border border-red-500/20' : 'bg-gradient-to-r from-purple-600 to-indigo-700 text-white shadow-purple-900/20'
                         }`}
                       >
-                         {active ? 'إلغاء الاستخدام' : 'استخدام الآن'}
+                         {active ? 'إلغاء الاستخدام' : 'ارتداء الآن'}
                       </button>
                    </div>
                  );
@@ -161,7 +173,7 @@ const BagModal: React.FC<BagModalProps> = ({ isOpen, onClose, user, onEquip }) =
            ) : (
              <div className="flex flex-col items-center justify-center h-full opacity-30 text-center px-10 gap-4">
                 <Package size={64} className="text-slate-600" />
-                <p className="text-sm font-black text-slate-400">خزانتك فارغة حالياً.. اذهب للمتجر وتميز بمظهرك الملكي!</p>
+                <p className="text-sm font-black text-slate-400">خزانتك فارغة حالياً.. شارك في الفعاليات وتميز بمظهرك الملكي!</p>
              </div>
            )}
         </div>
