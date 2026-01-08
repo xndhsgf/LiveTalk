@@ -181,8 +181,10 @@ export default function App() {
   };
 
   useEffect(() => {
+    // مراقب حالة تسجيل الدخول لـ Firebase
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
+        // إذا وجد مستخدم، نقوم بجلب بياناته من Firestore
         const unsubUserDoc = onSnapshot(doc(db, 'users', firebaseUser.uid), (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
@@ -208,14 +210,21 @@ export default function App() {
               localStorage.setItem('voice_chat_user', JSON.stringify(merged));
               return merged;
             });
+            // انتهى التحميل ووجدنا مستخدم
+            setInitializing(false);
+          } else {
+            // وثيقة المستخدم غير موجودة، نعتبره غير مسجل
+            setUser(null);
+            setInitializing(false);
           }
         });
         return () => unsubUserDoc();
       } else {
+        // لا يوجد جلسة نشطة
         setUser(null);
         localStorage.removeItem('voice_chat_user');
+        setInitializing(false);
       }
-      setInitializing(false);
     });
     return () => unsubscribeAuth();
   }, []);
@@ -288,7 +297,6 @@ export default function App() {
   }, []);
 
   const allBanners = useMemo(() => {
-    // تم إلغاء استخدام appBanner الأساسي بناءً على الطلب ليكون الرفع من النشاط فقط
     const banners: { url: string; activity?: Activity }[] = [];
     activities.forEach(act => {
       if (act.bannerUrl) banners.push({ url: act.bannerUrl, activity: act });

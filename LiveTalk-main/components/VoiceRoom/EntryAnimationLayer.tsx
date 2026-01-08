@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../../services/firebase';
-import { collection, query, orderBy, limit, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
 interface EntryEvent {
   id: string;
@@ -25,12 +25,20 @@ const EntryAnimationLayer: React.FC<EntryAnimationLayerProps> = ({ roomId, curre
   const playedIds = useRef(new Set<string>());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const labelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     if (onActiveChange) {
       onActiveChange(!!activeEntry);
     }
   }, [activeEntry, onActiveChange]);
+
+  const clearEntry = () => {
+    setActiveEntry(null);
+    setShowLabel(false);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (labelTimerRef.current) clearTimeout(labelTimerRef.current);
+  };
 
   useEffect(() => {
     const q = query(
@@ -50,7 +58,8 @@ const EntryAnimationLayer: React.FC<EntryAnimationLayerProps> = ({ roomId, curre
           const now = Date.now();
           const eventTime = data.timestamp?.toMillis ? data.timestamp.toMillis() : now;
           
-          if (Math.abs(now - eventTime) < 15000) {
+          // قبول الفعاليات التي حدثت في آخر 10 ثوانٍ فقط لمنع تكرار قديم
+          if (Math.abs(now - eventTime) < 10000) {
             playedIds.current.add(event.id);
             
             // تهيئة الدخولية الجديدة
@@ -60,19 +69,21 @@ const EntryAnimationLayer: React.FC<EntryAnimationLayerProps> = ({ roomId, curre
             if (timerRef.current) clearTimeout(timerRef.current);
             if (labelTimerRef.current) clearTimeout(labelTimerRef.current);
             
-            // إخفاء البطاقة النصية (الجزء الأحمر) بعد ثانيتين فقط
+            // إخفاء البطاقة النصية بعد 2.5 ثانية لتركيز النظر على الفيديو
             labelTimerRef.current = setTimeout(() => {
               setShowLabel(false);
-            }, 2000);
+            }, 2500);
 
-            const displayDuration = (Number(event.duration) || 6) * 1000;
+            // تحويل الثواني المحددة من الإدارة إلى ملي ثانية
+            // نستخدم القيمة المحددة بدقة (duration)
+            const exactDurationMs = (Number(event.duration) || 6) * 1000;
             
-            // إنهاء فيديو الدخولية بالكامل بعد الوقت المحدد في المتجر
+            // المؤقت القاطع: يضمن إزالة المكون فور انتهاء الثواني المحددة
             timerRef.current = setTimeout(() => {
-              setActiveEntry(null);
-              setShowLabel(false);
-              setTimeout(() => playedIds.current.delete(event.id), 30000);
-            }, displayDuration);
+              clearEntry();
+              // تنظيف الذاكرة للمعرف بعد فترة أطول
+              setTimeout(() => playedIds.current.delete(event.id), 20000);
+            }, exactDurationMs);
           }
         }
       });
@@ -82,7 +93,6 @@ const EntryAnimationLayer: React.FC<EntryAnimationLayerProps> = ({ roomId, curre
       unsubscribe();
       if (timerRef.current) clearTimeout(timerRef.current);
       if (labelTimerRef.current) clearTimeout(labelTimerRef.current);
-      playedIds.current.clear();
     };
   }, [roomId]);
 
@@ -95,16 +105,20 @@ const EntryAnimationLayer: React.FC<EntryAnimationLayerProps> = ({ roomId, curre
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
             className="absolute inset-0 flex items-center justify-center pointer-events-none"
           >
              <video 
+               ref={videoRef}
                src={activeEntry.videoUrl} 
                autoPlay 
                playsInline 
+               // ضمان اختفاء الفيديو فور انتهائه حتى لو كانت مدة الفيديو أقصر من الثواني المحددة
+               onEnded={clearEntry}
                className="w-full h-full object-cover pointer-events-none"
                onPlay={(e) => {
                  const video = e.target as HTMLVideoElement;
-                 video.volume = 0.6;
+                 video.volume = 0.8;
                  video.muted = false;
                }}
              />
