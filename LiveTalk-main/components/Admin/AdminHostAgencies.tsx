@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Search, ShieldCheck, Users, PlusCircle, Building, Trash2, ChevronRight, UserPlus, Trophy, Coins } from 'lucide-react';
+import { Search, ShieldCheck, Users, PlusCircle, Building, Trash2, ChevronRight, UserPlus, Trophy, Coins, Settings2, Percent, Zap, TrendingUp, Save } from 'lucide-react';
 import { db } from '../../services/firebase';
 import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, where, getDocs, serverTimestamp, increment, getDoc, arrayUnion } from 'firebase/firestore';
 import { User, HostAgency } from '../../types';
@@ -18,17 +18,40 @@ const AdminHostAgencies: React.FC<AdminHostAgenciesProps> = ({ users, onUpdateUs
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [viewingAgency, setViewingAgency] = useState<HostAgency | null>(null);
   const [agencyHosts, setAgencyHosts] = useState<User[]>([]);
+  
+  // إعدادات الاقتصاد
+  const [economySettings, setEconomySettings] = useState({
+    hostProductionRatio: 70, // 70%
+    salaryToAgencyRatio: 1.14 // (80000 / 70000)
+  });
+  const [isSavingEconomy, setIsSavingEconomy] = useState(false);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'host_agencies'), (snapshot) => {
       setAgencies(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HostAgency)));
     });
-    return () => unsub();
+
+    const unsubEconomy = onSnapshot(doc(db, 'appSettings', 'economy'), (snap) => {
+      if (snap.exists()) setEconomySettings(prev => ({ ...prev, ...snap.data() }));
+    });
+
+    return () => { unsub(); unsubEconomy(); };
   }, []);
+
+  const handleSaveEconomy = async () => {
+    setIsSavingEconomy(true);
+    try {
+      await setDoc(doc(db, 'appSettings', 'economy'), economySettings, { merge: true });
+      alert('تم تحديث إعدادات الاقتصاد الملكي بنجاح ✅');
+    } catch (e) {
+      alert('فشل حفظ الإعدادات');
+    } finally {
+      setIsSavingEconomy(false);
+    }
+  };
 
   const handleCreateAgency = async () => {
     if (!selectedUser || !newAgencyName.trim()) return;
-    
     const agencyId = 'agency_' + Date.now();
     try {
       const medalsSnap = await getDoc(doc(db, 'appSettings', 'medals_library'));
@@ -42,7 +65,6 @@ const AdminHostAgencies: React.FC<AdminHostAgenciesProps> = ({ users, onUpdateUs
         totalProduction: 0
       });
 
-      // منطق إضافة الوسام في بداية القائمة (unshift)
       let currentAchievements = [...(selectedUser.achievements || [])];
       if (autoAgentMedal && !currentAchievements.includes(autoAgentMedal)) {
         currentAchievements.unshift(autoAgentMedal);
@@ -51,7 +73,7 @@ const AdminHostAgencies: React.FC<AdminHostAgenciesProps> = ({ users, onUpdateUs
       await onUpdateUser(selectedUser.id, { 
         isHostAgent: true, 
         hostAgencyId: agencyId,
-        achievements: currentAchievements.slice(0, 30) // الحفاظ على الحد الأقصى
+        achievements: currentAchievements.slice(0, 30)
       });
 
       alert('تم فتح الوكالة ومنح وسام الوكيل الملكي بنجاح! ✅');
@@ -71,11 +93,9 @@ const AdminHostAgencies: React.FC<AdminHostAgenciesProps> = ({ users, onUpdateUs
     try {
       const medalsSnap = await getDoc(doc(db, 'appSettings', 'medals_library'));
       const autoHostMedal = medalsSnap.exists() ? medalsSnap.data().autoHostMedal : null;
-
       const user = users.find(u => u.id === userId);
       if (!user) return;
 
-      // منطق إضافة الوسام في بداية القائمة (unshift)
       let currentAchievements = [...(user.achievements || [])];
       if (autoHostMedal && !currentAchievements.includes(autoHostMedal)) {
         currentAchievements.unshift(autoHostMedal);
@@ -99,6 +119,69 @@ const AdminHostAgencies: React.FC<AdminHostAgenciesProps> = ({ users, onUpdateUs
 
   return (
     <div className="space-y-8 text-right font-cairo" dir="rtl">
+      
+      {/* قسم التحكم الاقتصادي الاحترافي */}
+      <div className="bg-gradient-to-br from-indigo-950/40 to-slate-900/40 p-8 rounded-[3rem] border border-indigo-500/20 shadow-2xl">
+         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="flex-1">
+               <h3 className="text-2xl font-black text-white flex items-center gap-3">
+                  <div className="p-2 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-900/40"><Settings2 className="text-white" /></div>
+                  مركز التحكم الاقتصادي (Economy Control)
+               </h3>
+               <p className="text-slate-500 text-xs font-bold mt-2">تحكم في نسب الأرباح التي يتقاضاها المضيفون والوكلاء من النظام.</p>
+            </div>
+            <button 
+               onClick={handleSaveEconomy}
+               disabled={isSavingEconomy}
+               className="px-10 py-4 bg-emerald-600 text-white rounded-2xl font-black text-xs shadow-xl active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50"
+            >
+               {isSavingEconomy ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save size={18} />}
+               حفظ الإعدادات المالية
+            </button>
+         </div>
+
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+            <div className="bg-black/40 p-6 rounded-[2rem] border border-white/5 space-y-4">
+               <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                     <TrendingUp className="text-amber-500" size={18} />
+                     <h4 className="text-sm font-black text-white">نسبة تارجت المضيف</h4>
+                  </div>
+                  <div className="bg-amber-500 text-black px-3 py-0.5 rounded-lg font-black text-xs">{economySettings.hostProductionRatio}%</div>
+               </div>
+               <input 
+                  type="range" min="1" max="100" 
+                  value={economySettings.hostProductionRatio}
+                  onChange={(e) => setEconomySettings({...economySettings, hostProductionRatio: parseInt(e.target.value)})}
+                  className="w-full h-3 bg-slate-800 rounded-full appearance-none cursor-pointer accent-amber-500"
+               />
+               <p className="text-[10px] text-slate-500 font-bold leading-relaxed">تحدد هذه النسبة مقدار ما يدخل في "تارجت" المضيف من قيمة الهدايا المستلمة. (المتبقي يذهب للوكالة والنظام)</p>
+            </div>
+
+            <div className="bg-black/40 p-6 rounded-[2rem] border border-white/5 space-y-4">
+               <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                     <Zap className="text-orange-500" size={18} />
+                     <h4 className="text-sm font-black text-white">معامل تحويل الراتب للوكيل</h4>
+                  </div>
+                  <div className="bg-orange-500 text-black px-3 py-0.5 rounded-lg font-black text-xs">x{economySettings.salaryToAgencyRatio.toFixed(2)}</div>
+               </div>
+               <div className="flex gap-4">
+                  <input 
+                    type="number" step="0.01"
+                    value={economySettings.salaryToAgencyRatio}
+                    onChange={(e) => setEconomySettings({...economySettings, salaryToAgencyRatio: parseFloat(e.target.value) || 1})}
+                    className="flex-1 bg-slate-900 border border-white/10 rounded-xl p-3 text-center text-orange-500 font-black"
+                  />
+                  <div className="flex-[1.5] bg-black/30 border border-white/5 rounded-xl p-3 flex flex-col justify-center items-center">
+                     <span className="text-[8px] text-slate-500 font-black uppercase">مثال التحويل</span>
+                     <span className="text-[10px] text-white font-bold">70,000 💎 = {(70000 * economySettings.salaryToAgencyRatio).toLocaleString()} 🪙</span>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+
       <div className="bg-slate-950/40 p-8 rounded-[2.5rem] border border-white/5 shadow-2xl flex justify-between items-center">
         <div>
           <h3 className="text-2xl font-black text-white flex items-center gap-3">

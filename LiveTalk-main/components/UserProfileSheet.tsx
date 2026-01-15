@@ -103,10 +103,12 @@ const UserProfileSheet: React.FC<UserProfileSheetProps> = ({ user: initialUser, 
           <div className="absolute top-6 left-6 flex items-center gap-2">
              {isCurrentUser && (
                 <button 
-                  onClick={() => onAction('edit')}
-                  className="p-2 bg-blue-600/60 backdrop-blur-md rounded-full text-white border border-blue-400/30 transition-all shadow-lg active:scale-90"
+                  onClick={() => {
+                    onAction('edit');
+                  }}
+                  className="p-2 bg-blue-600 backdrop-blur-md rounded-full text-white border border-white/20 transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] active:scale-90 z-50"
                 >
-                  <Edit3 size={16} />
+                  <Edit3 size={18} strokeWidth={2.5} />
                 </button>
              )}
              {canManage && (
@@ -274,7 +276,7 @@ const UserProfileSheet: React.FC<UserProfileSheetProps> = ({ user: initialUser, 
                 {canManage && (
                    <button 
                      onClick={() => { if(confirm('هل أنت متأكد من طرد وحظر العضو من الغرفة؟')) { onAction('kickAndBan'); setShowAdminMenu(false); } }} 
-                     className="w-full p-4 bg-red-600/10 rounded-2xl flex items-center gap-3 text-red-500 text-xs font-black hover:bg-red-600 hover:text-white border border-red-500/20"
+                     className="w-full p-4 bg-red-600/10 rounded-2xl flex items-center justify-center gap-3 text-red-500 text-xs font-black hover:bg-red-600 hover:text-white border border-red-500/20"
                    >
                       <UserMinus size={18} /> طرد وحظر من الغرفة
                    </button>
@@ -282,7 +284,7 @@ const UserProfileSheet: React.FC<UserProfileSheetProps> = ({ user: initialUser, 
 
                 <button 
                   onClick={() => { onAction('resetUserCharm'); setShowAdminMenu(false); }} 
-                  className="w-full p-4 bg-white/5 rounded-2xl flex items-center gap-3 text-white text-xs font-black hover:bg-white/10 border border-white/5"
+                  className="w-full p-4 bg-white/5 rounded-2xl flex items-center justify-center gap-3 text-white text-xs font-black hover:bg-white/10 border border-white/5"
                 >
                    <RotateCcw size={18} className="text-blue-400" /> تصفير الكاريزما
                 </button>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trophy, History, Coins, Volume2, VolumeX, HelpCircle, Star, Zap, ChevronLeft, ChevronRight, User as UserIcon } from 'lucide-react';
@@ -38,16 +39,6 @@ const LionWheelGameModal: React.FC<LionWheelGameModalProps> = ({ isOpen, onClose
   const [winner, setWinner] = useState<typeof LION_ITEMS[0] | null>(null);
   const [winAmount, setWinAmount] = useState(0);
   const [selectorRotation, setSelectorRotation] = useState(0); 
-
-  useEffect(() => {
-    if (!CHIPS.includes(selectedChip)) {
-      setSelectedChip(CHIPS[0]);
-    }
-  }, [CHIPS, selectedChip]);
-
-  const WHEEL_RADIUS = 90; 
-  const POD_WIDTH = 62;
-  const POD_HEIGHT = 48;
 
   useEffect(() => {
     if (history.length === 0) {
@@ -106,6 +97,7 @@ const LionWheelGameModal: React.FC<LionWheelGameModalProps> = ({ isOpen, onClose
       if (bets[winningItem.id]) {
         const payout = bets[winningItem.id] * winningItem.multiplier;
         setWinAmount(payout);
+        // Instant update UI and sync in background
         onUpdateCoins(userCoins + payout + bets[winningItem.id]);
       }
       setState(GameState.RESULT);
@@ -114,6 +106,7 @@ const LionWheelGameModal: React.FC<LionWheelGameModalProps> = ({ isOpen, onClose
 
   const handlePlaceBet = (itemId: string) => {
     if (state !== GameState.BETTING || userCoins < selectedChip) return;
+    // 🔥 Instant Coin Deduction
     onUpdateCoins(userCoins - selectedChip);
     setBets(prev => ({ ...prev, [itemId]: (prev[itemId] || 0) + selectedChip }));
   };
@@ -186,11 +179,11 @@ const LionWheelGameModal: React.FC<LionWheelGameModalProps> = ({ isOpen, onClose
                     >
                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full">
                           <div 
-                             style={{ transform: `translateY(-${WHEEL_RADIUS}px)` }}
+                             style={{ transform: `translateY(-${90}px)` }}
                              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
                           >
                              <div 
-                                style={{ width: POD_WIDTH + 6, height: POD_HEIGHT + 6 }}
+                                style={{ width: 68, height: 54 }}
                                 className="bg-white/10 backdrop-blur-[1px] border-[3px] border-white rounded-[1.4rem] shadow-[0_0_15px_white,inset_0_0_8px_white] flex items-center justify-center"
                              >
                                 <motion.div animate={{ opacity: [0.3, 0.6, 0.3], scale: [1, 1.05, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="absolute inset-1 border border-yellow-300/50 rounded-xl" />
@@ -204,8 +197,8 @@ const LionWheelGameModal: React.FC<LionWheelGameModalProps> = ({ isOpen, onClose
                 <div className="absolute inset-0">
                    {LION_ITEMS.map((item, idx) => {
                       const angle = (360 / LION_ITEMS.length) * idx;
-                      const x = WHEEL_RADIUS * Math.cos((angle - 90) * (Math.PI / 180));
-                      const y = WHEEL_RADIUS * Math.sin((angle - 90) * (Math.PI / 180));
+                      const x = 90 * Math.cos((angle - 90) * (Math.PI / 180));
+                      const y = 90 * Math.sin((angle - 90) * (Math.PI / 180));
                       const isWinning = winner?.id === item.id && state === GameState.RESULT;
 
                       return (
@@ -216,14 +209,14 @@ const LionWheelGameModal: React.FC<LionWheelGameModalProps> = ({ isOpen, onClose
                            className={`absolute left-1/2 top-1/2 -ml-8 -mt-8 w-16 h-16 flex flex-col items-center justify-center transition-all ${isWinning ? 'scale-110 z-50' : 'active:scale-95'}`}
                         >
                            <div 
-                              style={{ width: POD_WIDTH, height: POD_HEIGHT }}
+                              style={{ width: 62, height: 48 }}
                               className={`relative bg-white/95 rounded-t-2xl border-b-[3px] border-amber-700 shadow-lg flex items-center justify-center overflow-visible transition-colors ${isWinning ? 'bg-yellow-50 border-yellow-500 ring-2 ring-yellow-400' : ''}`}
                            >
                               <span className="text-2xl filter drop-shadow-md -mt-8">{item.icon}</span>
                               <div className="absolute -right-2 -top-1.5 bg-gradient-to-br from-amber-400 to-amber-600 text-black text-[7px] font-black italic px-1 rounded-md border border-white/20 shadow-sm">x{item.multiplier}</div>
                            </div>
                            <div 
-                              style={{ width: POD_WIDTH }}
+                              style={{ width: 62 }}
                               className="h-2.5 bg-gradient-to-b from-amber-700 to-amber-900 rounded-b-xl shadow-md flex items-center justify-center"
                            >
                               {bets[item.id] > 0 && (
@@ -243,7 +236,6 @@ const LionWheelGameModal: React.FC<LionWheelGameModalProps> = ({ isOpen, onClose
                          <span className="text-4xl filter drop-shadow-lg">🦁</span>
                          <div className="absolute top-0 left-0 right-0 h-5 bg-white/20 -rotate-3"></div>
                       </div>
-                      {/* الدائرة البنية المحسنة للعداد */}
                       <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-amber-800 border-2 border-yellow-400 text-yellow-400 w-12 h-12 rounded-full flex flex-col items-center justify-center font-black shadow-md italic leading-none overflow-hidden">
                          {state === GameState.BETTING ? (
                             <>
@@ -260,7 +252,6 @@ const LionWheelGameModal: React.FC<LionWheelGameModalProps> = ({ isOpen, onClose
         </div>
 
         <div className="relative z-20 bg-[#EF4444] rounded-t-[2.5rem] p-3 border-t-4 border-[#FBBF24] flex flex-col gap-3 shadow-[0_-15px_40px_rgba(0,0,0,0.5)] pb-6 mt-auto">
-           
            <div className="flex justify-between items-center gap-1.5 bg-black/20 p-1 rounded-full border border-white/5">
               {CHIPS.map(c => (
                  <button 
@@ -311,7 +302,6 @@ const LionWheelGameModal: React.FC<LionWheelGameModalProps> = ({ isOpen, onClose
                  <div className="w-4 h-0.5 bg-green-400/30 rounded-full mt-0.5"></div>
               </button>
            </div>
-
         </div>
       </motion.div>
     </div>

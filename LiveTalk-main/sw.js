@@ -1,18 +1,17 @@
 
-const CACHE_NAME = 'livetalk-v1';
-const ASSETS = [
+const CACHE_NAME = 'livetalk-v3-fresh';
+const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
   '/index.css',
-  '/index.tsx',
-  'https://storage.googleapis.com/static.aistudio.google.com/stables/2025/03/06/f0e64906-e7e0-4a87-af9b-029e2467d302/f0e64906-e7e0-4a87-af9b-029e2467d302.png'
+  '/index.tsx'
 ];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
+      return cache.addAll(ASSETS_TO_CACHE);
     })
   );
   self.skipWaiting();
@@ -32,12 +31,26 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // عدم تخزين طلبات Firebase لضمان تحديث البيانات اللحظي
-  if (e.request.url.includes('firestore.googleapis.com')) return;
-  
+  const url = new URL(e.request.url);
+
+  // استراتيجية Network-First للصور الديناميكية (اللوجو، الخلفيات) لضمان التحديث الفوري
+  if (e.request.destination === 'image' || url.pathname.includes('.png') || url.pathname.includes('.jpg')) {
+    e.respondWith(
+      fetch(e.request).then((networkResponse) => {
+        return caches.open(CACHE_NAME).then((cache) => {
+          cache.put(e.request, networkResponse.clone());
+          return networkResponse;
+        });
+      }).catch(() => {
+        return caches.match(e.request);
+      })
+    );
+    return;
+  }
+
   e.respondWith(
     caches.match(e.request).then((res) => {
-      return res || fetch(e.request).catch(() => {});
+      return res || fetch(e.request);
     })
   );
 });

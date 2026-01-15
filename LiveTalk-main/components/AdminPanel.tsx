@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, ShieldCheck, Activity, Gift as GiftIcon, ShoppingBag, 
-  Crown, Smartphone, Eraser, X, Medal, IdCard, Layout, Zap, Smile, Heart, Building, Image as ImageIcon, UserCircle, Home, Menu, ChevronLeft, Sparkles
+  Crown, Smartphone, Eraser, X, Medal, IdCard, Layout, Zap, Smile, Heart, Building, Image as ImageIcon, UserCircle, Home, Menu, ChevronLeft, Sparkles, UserCog
 } from 'lucide-react';
 import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -27,6 +27,7 @@ import AdminBackgrounds from './Admin/AdminBackgrounds';
 import AdminDefaults from './Admin/AdminDefaults';
 import AdminRooms from './Admin/AdminRooms';
 import AdminActivities from './Admin/AdminActivities';
+import AdminProfiles from './Admin/AdminProfiles';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -85,6 +86,7 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
 
   const menuItems = [
     { id: 'users', label: 'إدارة الأعضاء', icon: Users, color: 'text-blue-400' },
+    { id: 'profiles', label: 'مركز الهويات', icon: UserCircle, color: 'text-emerald-400' },
     { id: 'rooms_manage', label: 'إدارة الغرف', icon: Home, color: 'text-red-500' },
     { id: 'activities_manage', label: 'الأنشطة والفعاليات', icon: Sparkles, color: 'text-amber-500' },
     { id: 'defaults', label: 'صور البداية', icon: UserCircle, color: 'text-indigo-400' },
@@ -162,37 +164,19 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
         </button>
       </div>
 
-      {/* Desktop Sidebar / Mobile Drawer Overlay */}
-      <AnimatePresence>
-        {isSidebarOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setIsSidebarOpen(false)}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[3010] md:hidden"
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Main Sidebar (Floating on Mobile) */}
+      {/* Desktop Sidebar */}
       <motion.div 
         className={`fixed md:relative top-0 right-0 h-full w-[280px] md:w-72 bg-slate-950 border-l border-white/5 flex flex-col shrink-0 shadow-2xl z-[3011] transition-transform md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <div className="p-6 border-b border-white/5">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-               <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-900/40">
-                  <ShieldCheck size={22} className="text-white" />
-               </div>
-               <div className="text-right">
-                 <p className="font-black text-xs text-white leading-none mb-1">لوحة التحكم</p>
-                 <p className="text-[10px] text-slate-500 font-bold uppercase">{isRootAdmin ? 'المدير العام' : 'مشرف نظام'}</p>
-               </div>
-            </div>
-            <button onClick={() => setIsSidebarOpen(false)} className="md:hidden p-2 text-slate-400">
-               <X size={20} />
-            </button>
+          <div className="flex items-center gap-3">
+             <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-900/40">
+                <ShieldCheck size={22} className="text-white" />
+             </div>
+             <div className="text-right">
+               <p className="font-black text-xs text-white leading-none mb-1">لوحة التحكم</p>
+               <p className="text-[10px] text-slate-500 font-bold uppercase">{isRootAdmin ? 'المدير العام' : 'مشرف نظام'}</p>
+             </div>
           </div>
         </div>
         
@@ -225,10 +209,11 @@ const AdminPanel: React.FC<AdminPanelProps> = (props) => {
         </div>
       </motion.div>
 
-      {/* Main Content Content Area */}
+      {/* Main Area */}
       <div className="flex-1 bg-[#020617] overflow-y-auto p-4 md:p-10 scrollbar-hide pb-20 md:pb-10 relative">
         <div className="max-w-7xl mx-auto">
             {activeTab === 'users' && <AdminUsers users={props.users} vipLevels={props.vipLevels} onUpdateUser={props.onUpdateUser} currentUser={props.currentUser} />}
+            {activeTab === 'profiles' && <AdminProfiles users={props.users} onUpdateUser={props.onUpdateUser} handleFileUpload={handleFileUpload} />}
             {activeTab === 'rooms_manage' && <AdminRooms rooms={props.rooms} />}
             {activeTab === 'activities_manage' && <AdminActivities gifts={props.gifts} handleFileUpload={handleFileUpload} />}
             {activeTab === 'defaults' && <AdminDefaults handleFileUpload={handleFileUpload} />}

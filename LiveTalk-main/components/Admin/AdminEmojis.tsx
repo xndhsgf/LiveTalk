@@ -30,12 +30,17 @@ const AdminEmojis: React.FC<AdminEmojisProps> = ({ gameSettings, onUpdateGameSet
   };
 
   const handleUploadEmoji = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
     setIsUploading(true);
+    // نستخدم منطق الرفع الممرر من المكون الأب لضمان التوافق مع Firebase/Base64
     handleFileUpload(e, (url) => {
       const updated = [...emojis, url];
       onUpdateGameSettings({ availableEmojis: updated });
       setIsUploading(false);
-    }, 200, 200);
+      alert('تم رفع الإيموشن بنجاح ✅');
+    }, 256, 256); // حجم مثالي للإيموشنات
   };
 
   return (
@@ -45,11 +50,10 @@ const AdminEmojis: React.FC<AdminEmojisProps> = ({ gameSettings, onUpdateGameSet
           <div className="p-2 bg-yellow-500 rounded-xl shadow-lg shadow-yellow-900/40"><Smile className="text-black" /></div>
           إدارة تفاعلات الغرف (Reactions)
         </h3>
-        <p className="text-slate-500 text-xs font-bold mt-2">قم برفع صور الإيموشنات أو إضافة رموز نصية وتحديد مدة ظهورها فوق المايك.</p>
+        <p className="text-slate-500 text-xs font-bold mt-2">يمكنك رفع صور (PNG/GIF) لتظهر كتفاعلات متحركة فوق المايك.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* إعداد مدة الظهور */}
         <div className="md:col-span-1 bg-slate-900/60 p-6 rounded-[2rem] border border-white/5 space-y-4 shadow-xl">
            <div className="flex items-center gap-2 mb-2">
               <Clock size={18} className="text-blue-400" />
@@ -62,15 +66,14 @@ const AdminEmojis: React.FC<AdminEmojisProps> = ({ gameSettings, onUpdateGameSet
                 onChange={(e) => onUpdateGameSettings({ emojiDuration: parseInt(e.target.value) || 1 })}
                 className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-center text-xl font-black text-blue-400 outline-none focus:border-blue-500/50"
               />
-              <p className="text-[10px] text-slate-500 text-center font-bold">عدد الثواني قبل اختفاء الإيموشن</p>
+              <p className="text-[10px] text-slate-500 text-center font-bold">عدد الثواني قبل اختفاء التفاعل</p>
            </div>
         </div>
 
-        {/* إضافة إيموشن جديد */}
         <div className="md:col-span-2 bg-slate-900/60 p-6 rounded-[2rem] border border-white/5 space-y-6 shadow-xl">
            <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 space-y-2">
-                 <label className="text-[10px] font-black text-slate-500 pr-2">إضافة رمز نصي (Emoji)</label>
+                 <label className="text-[10px] font-black text-slate-500 pr-2">إضافة رمز تعبيري نصي</label>
                  <div className="flex gap-2">
                     <input 
                       type="text" 
@@ -84,9 +87,9 @@ const AdminEmojis: React.FC<AdminEmojisProps> = ({ gameSettings, onUpdateGameSet
               </div>
               
               <div className="space-y-2">
-                 <label className="text-[10px] font-black text-slate-500 pr-2">رفع صورة إيموشن</label>
-                 <label className={`w-full md:w-32 h-[52px] bg-blue-600 text-white rounded-xl flex items-center justify-center gap-2 cursor-pointer hover:bg-blue-500 transition-all font-black text-xs ${isUploading ? 'opacity-50' : ''}`}>
-                    {isUploading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Upload size={18}/> رفع</>}
+                 <label className="text-[10px] font-black text-slate-500 pr-2">رفع صورة تفاعل (PNG/GIF)</label>
+                 <label className={`w-full md:w-40 h-[52px] bg-blue-600 text-white rounded-xl flex items-center justify-center gap-2 cursor-pointer hover:bg-blue-500 transition-all font-black text-xs shadow-lg active:scale-95 ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {isUploading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Upload size={18}/> رفع ملف</>}
                     <input type="file" accept="image/*" className="hidden" onChange={handleUploadEmoji} />
                  </label>
               </div>
@@ -94,11 +97,10 @@ const AdminEmojis: React.FC<AdminEmojisProps> = ({ gameSettings, onUpdateGameSet
         </div>
       </div>
 
-      {/* قائمة الإيموشنات الحالية */}
       <div className="bg-black/20 p-8 rounded-[3rem] border border-white/5">
          <div className="flex items-center justify-between mb-6">
             <h4 className="text-white font-black text-sm flex items-center gap-2">
-               <Sparkles size={16} className="text-yellow-400" /> الإيموشنات المتاحة حالياً ({emojis.length})
+               <Sparkles size={16} className="text-yellow-400" /> التفاعلات المتاحة ({emojis.length})
             </h4>
          </div>
 
@@ -106,7 +108,7 @@ const AdminEmojis: React.FC<AdminEmojisProps> = ({ gameSettings, onUpdateGameSet
             {emojis.map((emoji, idx) => {
                const isUrl = emoji.startsWith('http') || emoji.startsWith('data:');
                return (
-                 <div key={idx} className="relative group aspect-square bg-slate-800 rounded-2xl border border-white/10 flex items-center justify-center overflow-hidden p-2">
+                 <div key={idx} className="relative group aspect-square bg-slate-800 rounded-2xl border border-white/10 flex items-center justify-center overflow-hidden p-2 shadow-inner">
                     {isUrl ? (
                        <img src={emoji} className="w-full h-full object-contain" alt="" />
                     ) : (
@@ -124,7 +126,7 @@ const AdminEmojis: React.FC<AdminEmojisProps> = ({ gameSettings, onUpdateGameSet
             {emojis.length === 0 && (
                <div className="col-span-full py-20 text-center opacity-30">
                   <ImageIcon size={48} className="mx-auto mb-2" />
-                  <p className="font-bold text-sm">لا توجد إيموشنات مخصصة.. استخدم القائمة أعلاه للإضافة</p>
+                  <p className="font-bold text-sm">لا توجد تفاعلات مخصصة بعد</p>
                </div>
             )}
          </div>

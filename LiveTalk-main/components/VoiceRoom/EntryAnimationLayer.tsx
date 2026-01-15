@@ -38,6 +38,12 @@ const EntryAnimationLayer: React.FC<EntryAnimationLayerProps> = ({ roomId, curre
     setShowLabel(false);
     if (timerRef.current) clearTimeout(timerRef.current);
     if (labelTimerRef.current) clearTimeout(labelTimerRef.current);
+    
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.removeAttribute('src');
+      videoRef.current.load();
+    }
   };
 
   useEffect(() => {
@@ -53,35 +59,29 @@ const EntryAnimationLayer: React.FC<EntryAnimationLayerProps> = ({ roomId, curre
           const data = change.doc.data();
           const event = { id: change.doc.id, ...data } as EntryEvent;
           
-          if (playedIds.current.has(event.id)) return;
+          if (!event.videoUrl || playedIds.current.has(event.id)) return;
 
           const now = Date.now();
           const eventTime = data.timestamp?.toMillis ? data.timestamp.toMillis() : now;
           
-          // قبول الفعاليات التي حدثت في آخر 10 ثوانٍ فقط لمنع تكرار قديم
+          // تشغيل الأحداث التي تمت في آخر 10 ثوانٍ فقط لمنع تراكم الدخوليات القديمة
           if (Math.abs(now - eventTime) < 10000) {
             playedIds.current.add(event.id);
-            
-            // تهيئة الدخولية الجديدة
             setActiveEntry(event);
             setShowLabel(true); 
             
             if (timerRef.current) clearTimeout(timerRef.current);
             if (labelTimerRef.current) clearTimeout(labelTimerRef.current);
             
-            // إخفاء البطاقة النصية بعد 2.5 ثانية لتركيز النظر على الفيديو
             labelTimerRef.current = setTimeout(() => {
               setShowLabel(false);
             }, 2500);
 
-            // تحويل الثواني المحددة من الإدارة إلى ملي ثانية
-            // نستخدم القيمة المحددة بدقة (duration)
             const exactDurationMs = (Number(event.duration) || 6) * 1000;
             
-            // المؤقت القاطع: يضمن إزالة المكون فور انتهاء الثواني المحددة
             timerRef.current = setTimeout(() => {
               clearEntry();
-              // تنظيف الذاكرة للمعرف بعد فترة أطول
+              // تنظيف الـ ID المحفوظ بعد 20 ثانية للسماح بدخول الشخص مرة أخرى لاحقاً
               setTimeout(() => playedIds.current.delete(event.id), 20000);
             }, exactDurationMs);
           }
@@ -113,13 +113,24 @@ const EntryAnimationLayer: React.FC<EntryAnimationLayerProps> = ({ roomId, curre
                src={activeEntry.videoUrl} 
                autoPlay 
                playsInline 
-               // ضمان اختفاء الفيديو فور انتهائه حتى لو كانت مدة الفيديو أقصر من الثواني المحددة
+               muted={false}
+               webkit-playsinline="true"
                onEnded={clearEntry}
+               onError={(e) => {
+                 console.error("Entry video load failed:", activeEntry.videoUrl);
+                 // محاولة التشغيل صامتاً إذا فشل التشغيل العادي (سياسة المتصفح)
+                 if (videoRef.current) {
+                   videoRef.current.muted = true;
+                   videoRef.current.play().catch(() => clearEntry());
+                 } else {
+                   clearEntry();
+                 }
+               }}
                className="w-full h-full object-cover pointer-events-none"
+               style={{ pointerEvents: 'none' }}
                onPlay={(e) => {
                  const video = e.target as HTMLVideoElement;
                  video.volume = 0.8;
-                 video.muted = false;
                }}
              />
              

@@ -123,12 +123,20 @@ const GlobalLeaderboardModal: React.FC<GlobalLeaderboardModalProps> = ({ isOpen,
                    {supporter.isVip && <div className="absolute -top-1 -right-1 bg-amber-500 text-[6px] font-black p-0.5 rounded-sm shadow-sm">VIP</div>}
                 </div>
 
-                <div className="flex-1 min-w-0">
-                   <h4 className="text-sm font-black text-white truncate flex items-center gap-1.5">
+                <div className="flex-1 min-w-0 text-right">
+                   <h4 className="text-sm font-black text-white truncate flex items-center gap-1.5 justify-end">
                      {supporter.name}
-                     {supporter.badge && <img src={supporter.badge} className="h-3 object-contain" alt="" />}
                    </h4>
-                   <p className="text-[9px] text-slate-500 font-bold">ID: {supporter.customId || supporter.id}</p>
+                   <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                      <p className="text-[9px] text-slate-500 font-bold">ID: {supporter.customId || supporter.id}</p>
+                      {supporter.badge && (
+                        <img 
+                          src={supporter.badge} 
+                          className="h-4 object-contain drop-shadow-md" 
+                          alt="ID Icon" 
+                        />
+                      )}
+                   </div>
                 </div>
 
                 <div className="shrink-0 flex flex-col items-end">

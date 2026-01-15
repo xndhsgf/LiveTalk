@@ -17,9 +17,9 @@ export interface StoreItem {
   price: number;
   url: string; 
   thumbnailUrl?: string; 
-  duration?: number; // مدة الأنميشن للدخوليات بالثواني
-  ownershipDays?: number; // مدة البقاء في الحقيبة بالأيام
-  expiresAt?: number; // التاريخ الفعلي لانتهاء الصلاحية (بالملي ثانية)
+  duration?: number;
+  ownershipDays?: number;
+  expiresAt?: number;
   isFromActivity?: boolean;
 }
 
@@ -49,7 +49,8 @@ export interface Activity {
   description: string;
   bannerUrl: string;
   backgroundUrl: string;
-  type: 'gift_event' | 'recharge_event' | 'generic';
+  externalUrl?: string; // رابط خارجي للبنرات الإعلانية
+  type: 'gift_event' | 'recharge_event' | 'generic' | 'external_link';
   status: 'active' | 'expired';
   startDate: any;
   endDate: any;
@@ -103,7 +104,7 @@ export interface User {
   charm: any;
   isVip: boolean;
   vipLevel?: number;
-  vipExpiresAt?: number; // تاريخ انتهاء الـ VIP
+  vipExpiresAt?: number;
   nameStyle?: string;
   idColor?: string; 
   bio?: string;
@@ -194,6 +195,7 @@ export interface Gift {
   duration?: number; 
   isLucky?: boolean;
   category?: 'popular' | 'exclusive' | 'lucky' | 'celebrity' | 'trend';
+  soundUrl?: string;
 }
 
 export interface Room {

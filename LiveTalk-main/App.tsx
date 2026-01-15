@@ -1,46 +1,36 @@
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Home, User as UserIcon, Plus, Bell, Crown, Gem, Settings, ChevronRight, Edit3, Share2, LogOut, Shield, Database, ShoppingBag, Camera, Trophy, Flame, Sparkles, UserX, Star, ShieldCheck, MapPin, Download, Smartphone, MessageCircle, Languages, Smartphone as MobileIcon, Wallet, Medal, Lock, AlertCircle, Key, X, Zap, BadgeCheck, ChevronLeft, Award, Coins, Users, UserPlus, Eye, Heart, Gamepad2, UserCheck, Search, Package, Store } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Home, User as UserIcon, Plus, Crown, Settings, LogOut, Smartphone, MessageCircle, Gamepad2, Search, Wallet, ShoppingBag, Package, Building, Zap, ShieldCheck, Edit3, Heart, ChevronRight, ChevronLeft, Globe, Trophy } from 'lucide-react';
 import RoomCard from './components/RoomCard';
 import VoiceRoom from './components/VoiceRoom';
 import AuthScreen from './components/AuthScreen';
-import Toast, { ToastMessage } from './components/Toast';
+import AdminPanel from './components/AdminPanel';
+import MessagesTab from './components/MessagesTab';
+import ActivitiesTab from './components/ActivitiesTab';
+import MiniPlayer from './components/MiniPlayer';
 import VIPModal from './components/VIPModal';
 import EditProfileModal from './components/EditProfileModal';
 import BagModal from './components/BagModal';
 import StoreModal from './components/StoreModal';
 import WalletModal from './components/WalletModal';
 import CreateRoomModal from './components/CreateRoomModal';
-import GlobalBanner from './components/GlobalBanner';
-import GlobalLuckyBagBanner from './components/GlobalLuckyBagBanner';
-import AdminPanel from './components/AdminPanel';
-import MiniPlayer from './components/MiniPlayer';
-import PrivateChatModal from './components/PrivateChatModal';
-import MessagesTab from './components/MessagesTab';
-import ActivitiesTab from './components/ActivitiesTab';
 import AgencyRechargeModal from './components/AgencyRechargeModal';
+import HostAgentDashboard from './components/HostAgentDashboard';
+import ActivityModal from './components/ActivityModal';
+import CPModal from './components/CPModal';
+import GlobalBanner from './components/GlobalBanner';
+import GlobalLeaderboardModal from './components/GlobalLeaderboardModal';
+import PrivateChatModal from './components/PrivateChatModal';
 import WheelGameModal from './components/WheelGameModal';
 import SlotsGameModal from './components/SlotsGameModal';
 import LionWheelGameModal from './components/LionWheelGameModal';
-import CPModal from './components/CPModal';
-import HostAgentDashboard from './components/HostAgentDashboard';
-import GlobalLeaderboardModal from './components/GlobalLeaderboardModal';
-import UserProfileSheet from './components/UserProfileSheet';
-import ActivityModal from './components/ActivityModal';
-import { DEFAULT_VIP_LEVELS, DEFAULT_GIFTS, DEFAULT_STORE_ITEMS } from './constants';
-import { Room, User, VIPPackage, UserLevel, Gift, StoreItem, GameSettings, GlobalAnnouncement, LuckyBag, GameType, LuckyMultiplier, Activity } from './types';
+import { Room, User, VIPPackage, Gift, StoreItem, GameSettings, Activity, GlobalAnnouncement, GameType } from './types';
 import { AnimatePresence, motion } from 'framer-motion';
 import { db, auth } from './services/firebase';
-import { EconomyEngine } from './services/economy'; 
-import { collection, onSnapshot, doc, setDoc, query, orderBy, addDoc, getDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, increment, limit, where, writeBatch, Timestamp } from 'firebase/firestore';
+import { EconomyEngine } from './services/economy';
+import { collection, onSnapshot, doc, query, orderBy, getDoc, updateDoc, limit, where, setDoc, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 
-const translations = {
-  ar: { home: "غرفة", messages: "المحادثة", profile: "انا", activities: "النشاطات", createRoom: "إنشاء", activeRooms: "الغرف النشطة", wallet: "Wallet", vip: "VIP", store: "المتجر", bag: "الحقيبة", level: "مستوى", agency: "وكالة", cp: "CP", invite: "دعوة", blacklist: "القائمة السوداء", privacy: "الخصوصية والسياسة", settings: "إعدادات", id: "ID", myWallet: "المحفظة", logout: "خروج", officialAgent: "وكيل رسمي" },
-  en: { home: "Room", messages: "Chats", profile: "Me", activities: "Activities", createRoom: "Create", activeRooms: "Active Rooms", wallet: "Wallet", vip: "VIP", store: "Store", bag: "Bag", level: "Level", agency: "Agency", cp: "CP", invite: "Invite", blacklist: "Blacklist", privacy: "Privacy", settings: "Settings", id: "ID", myWallet: "Wallet", logout: "Logout", officialAgent: "Official Agent" }
-};
-
-const ROOT_ADMIN_EMAIL = 'admin-owner@livetalk.com';
 const PERMANENT_LOGO_URL = 'https://storage.googleapis.com/static.aistudio.google.com/stables/2025/03/06/f0e64906-e7e0-4a87-af9b-029e2467d302/f0e64906-e7e0-4a87-af9b-029e2467d302.png';
 
 const calculateLvl = (pts: number) => {
@@ -49,21 +39,16 @@ const calculateLvl = (pts: number) => {
   return Math.max(1, Math.min(200, l));
 };
 
-const HeaderLevelBadge: React.FC<{ level: number; type: 'wealth' | 'recharge' }> = ({ level, type }) => {
+// شارة لفل احترافية ومنسقة (تُستخدم في أماكن أخرى ولكن تم إزالتها من منطقة الهوية المطلوبة)
+const ProfileBadge: React.FC<{ level: number; type: 'wealth' | 'recharge' }> = ({ level, type }) => {
   const isWealth = type === 'wealth';
   return (
-    <div className="relative h-4 min-w-[42px] flex items-center group cursor-default">
-      <div className={`absolute inset-0 rounded-l-sm rounded-r-lg border border-amber-500/30 ${
-        isWealth ? 'bg-gradient-to-r from-[#6a29e3] to-[#8b5cf6]' : 'bg-[#121212]'
-      }`}></div>
-      <div className="relative z-10 flex-1 text-center pr-1">
-        <span className="text-[7px] font-black italic text-white drop-shadow-md">{level}</span>
-      </div>
-      <div className="relative z-20 w-4 h-4 flex items-center justify-center -mr-1">
-        <div className={`absolute inset-0 rounded-sm transform rotate-45 border border-amber-500/50 ${
-          isWealth ? 'bg-[#7c3aed]' : 'bg-black'
-        }`}></div>
-        <span className="relative z-30 text-[6px] mb-0.5">👑</span>
+    <div className="relative h-5 min-w-[55px] flex items-center pr-2 shrink-0">
+      <div className={`absolute inset-0 right-2 rounded-l-md border border-white/10 ${isWealth ? 'bg-gradient-to-r from-purple-700 to-indigo-600 shadow-[0_0_10px_rgba(124,58,237,0.3)]' : 'bg-slate-900 border-blue-500/20'}`}></div>
+      <div className="relative z-10 flex-1 text-center pr-1"><span className="text-[10px] font-black italic text-white drop-shadow-md">{level}</span></div>
+      <div className="relative z-20 w-5 h-5 flex items-center justify-center -mr-1">
+        <div className={`absolute inset-0 rounded-sm transform rotate-45 border border-white/20 ${isWealth ? 'bg-purple-600' : 'bg-black'}`}></div>
+        <span className="relative z-30 text-[8px] mb-0.5">{isWealth ? '💎' : '⚡'}</span>
       </div>
     </div>
   );
@@ -75,510 +60,368 @@ export default function App() {
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [isRoomMinimized, setIsRoomMinimized] = useState(false);
   const [isUserMuted, setIsUserMuted] = useState(true);
-  const [language, setLanguage] = useState<'ar' | 'en'>('ar');
   
-  const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('voice_chat_user');
-    if (saved) {
-      try {
-        const u = JSON.parse(saved);
-        u.wealthLevel = calculateLvl(Number(u.wealth || 0));
-        u.rechargeLevel = calculateLvl(Number(u.rechargePoints || 0));
-        u.earnedItems = Array.isArray(u.earnedItems) ? u.earnedItems : [];
-        u.ownedItems = Array.isArray(u.ownedItems) ? u.ownedItems : [];
-        return u;
-      } catch (e) { return null; }
-    }
-    return null;
-  });
-
+  const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]); 
   const [gifts, setGifts] = useState<Gift[]>([]);
   const [storeItems, setStoreItems] = useState<StoreItem[]>([]);
   const [vipLevels, setVipLevels] = useState<VIPPackage[]>([]);
-  const [announcement, setAnnouncement] = useState<GlobalAnnouncement | null>(null);
-  const [appBanner, setAppBanner] = useState('');
-  const [appName, setAppName] = useState('لايف توك - LiveTalk');
-  const [authBackground, setAuthBackground] = useState('');
-  const [privateChatPartner, setPrivateChatPartner] = useState<User | null>(null);
-  const [activeGame, setActiveGame] = useState<GameType | null>(null);
-  const [showGlobalLeaderboard, setShowGlobalLeaderboard] = useState(false);
-  const [giftCategoryLabels, setGiftCategoryLabels] = useState<any>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
-  const [activeActivity, setActiveActivity] = useState<Activity | null>(null);
-  const [showActivityModal, setShowActivityModal] = useState(false);
-  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-  
+  const [appName, setAppName] = useState('لايف توك - LiveTalk');
+  const [appLogo, setAppLogo] = useState(PERMANENT_LOGO_URL);
+  const [authBackground, setAuthBackground] = useState('');
+  const [announcement, setAnnouncement] = useState<GlobalAnnouncement | null>(null);
+
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showVIPModal, setShowVIPModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showBagModal, setShowBagModal] = useState(false);
   const [showStoreModal, setShowStoreModal] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
   const [showAgencyModal, setShowAgencyModal] = useState(false);
-  const [showCPModal, setShowCPModal] = useState(false);
   const [showHostAgentDashboard, setShowHostAgentDashboard] = useState(false);
+  const [showCPModal, setShowCPModal] = useState(false);
+  const [showGlobalLeaderboard, setShowGlobalLeaderboard] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [selectedChatPartner, setSelectedChatPartner] = useState<User | null>(null);
+  const [activeGlobalGame, setActiveGlobalGame] = useState<GameType | null>(null);
+  
+  const [currentBannerIdx, setCurrentBannerIdx] = useState(0);
+  const bannerTimerRef = useRef<any>(null);
+  const lastJoinedRoomId = useRef<string | null>(null);
+
   const [gameSettings, setGameSettings] = useState<GameSettings>({
     slotsWinRate: 35, wheelWinRate: 45, lionWinRate: 35, luckyGiftWinRate: 30, luckyGiftRefundPercent: 0, luckyXEnabled: false, luckyMultipliers: [], wheelJackpotX: 8, wheelNormalX: 2, slotsSevenX: 20, slotsFruitX: 5, availableEmojis: [], emojiDuration: 4
   });
 
-  const [searchIdQuery, setSearchIdQuery] = useState('');
-  const [showSearchResults, setShowSearchResults] = useState(false);
-  const [selectedUserForProfile, setSelectedUserForProfile] = useState<User | null>(null);
-  const [showProfileSheet, setShowProfileSheet] = useState(false);
-
-  const pendingUserUpdates = useRef<Partial<User>>({});
-  const lastAnnouncementId = useRef<string | null>(null);
-  const [appLogo, setAppLogo] = useState(() => localStorage.getItem('voice_chat_user_fixed_logo') || PERMANENT_LOGO_URL);
-
-  const t = translations[language];
-
-  const isRootAdmin = useMemo(() => {
-    const currentEmail = auth.currentUser?.email?.toLowerCase();
-    const isIdOne = user?.customId?.toString() === '1';
-    return currentEmail === ROOT_ADMIN_EMAIL.toLowerCase() || isIdOne;
-  }, [auth.currentUser?.email, user?.customId]);
-
-  const canAccessAdmin = useMemo(() => isRootAdmin || user?.isSystemModerator, [isRootAdmin, user?.isSystemModerator]);
+  const handlePushState = () => {
+    window.history.pushState({ popup: true }, "");
+  };
 
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
-      if (activeGame) { setActiveGame(null); return; }
-      if (showProfileSheet) { setShowProfileSheet(false); return; }
-      if (showGlobalLeaderboard) { setShowGlobalLeaderboard(false); return; }
-      if (showActivityModal) { setShowActivityModal(false); return; }
-      if (showVIPModal) { setShowVIPModal(false); return; }
-      if (showEditProfileModal) { setShowEditProfileModal(false); return; }
-      if (showBagModal) { setShowBagModal(false); return; }
-      if (showStoreModal) { setShowStoreModal(false); return; }
-      if (showWalletModal) { setShowWalletModal(false); return; }
-      if (showAdminPanel) { setShowAdminPanel(false); return; }
-      if (showCreateRoomModal) { setShowCreateRoomModal(false); return; }
-      if (showAgencyModal) { setShowAgencyModal(false); return; }
-      if (showCPModal) { setShowCPModal(false); return; }
-      if (showHostAgentDashboard) { setShowHostAgentDashboard(false); return; }
-      if (privateChatPartner) { setPrivateChatPartner(null); return; }
-      
-      if (currentRoom && !isRoomMinimized) {
-        setIsRoomMinimized(true);
-        return;
-      }
+      if (showAdminPanel) setShowAdminPanel(false);
+      else if (showVIPModal) setShowVIPModal(false);
+      else if (showEditProfileModal) setShowEditProfileModal(false);
+      else if (showBagModal) setShowBagModal(false);
+      else if (showStoreModal) setShowStoreModal(false);
+      else if (showWalletModal) setShowWalletModal(false);
+      else if (showCreateRoomModal) setShowCreateRoomModal(false);
+      else if (showAgencyModal) setShowAgencyModal(false);
+      else if (showHostAgentDashboard) setShowHostAgentDashboard(false);
+      else if (showCPModal) setShowCPModal(false);
+      else if (showGlobalLeaderboard) setShowGlobalLeaderboard(false);
+      else if (selectedActivity) setSelectedActivity(null);
+      else if (selectedChatPartner) setSelectedChatPartner(null);
+      else if (activeGlobalGame) setActiveGlobalGame(null);
+      else if (currentRoom && !isRoomMinimized) setIsRoomMinimized(true);
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [
-    activeGame, showProfileSheet, showGlobalLeaderboard, showActivityModal, showVIPModal,
-    showEditProfileModal, showBagModal, showStoreModal, showWalletModal, showAdminPanel,
-    showCreateRoomModal, showAgencyModal, showCPModal, showHostAgentDashboard, 
-    privateChatPartner, currentRoom, isRoomMinimized
+    showAdminPanel, showVIPModal, showEditProfileModal, showBagModal, showStoreModal, 
+    showWalletModal, showCreateRoomModal, showAgencyModal, showHostAgentDashboard, 
+    showCPModal, showGlobalLeaderboard, selectedActivity, selectedChatPartner, 
+    activeGlobalGame, currentRoom, isRoomMinimized
   ]);
 
-  const pushNewState = () => {
-    window.history.pushState({ modalOpen: true }, '');
-  };
-
   useEffect(() => {
-    // مراقب حالة تسجيل الدخول لـ Firebase
-    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubIdentity = onSnapshot(doc(db, 'appSettings', 'identity'), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.appLogo) setAppLogo(data.appLogo);
+        if (data.authBackground) setAuthBackground(data.authBackground);
+        if (data.appName) setAppName(data.appName);
+      }
+    });
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // إذا وجد مستخدم، نقوم بجلب بياناته من Firestore
-        const unsubUserDoc = onSnapshot(doc(db, 'users', firebaseUser.uid), (docSnap) => {
+        const userRef = doc(db, 'users', firebaseUser.uid);
+        const unsubUser = onSnapshot(userRef, (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
-            const wealthPts = Number(data.wealth || 0);
-            const rechargePts = Number(data.rechargePoints || 0);
-            
             const userData = { 
               id: docSnap.id, ...data,
-              wealthLevel: calculateLvl(wealthPts),
-              rechargeLevel: calculateLvl(rechargePts),
-              coins: Number(data.coins || 0),
-              diamonds: Number(data.diamonds || 0),
-              wealth: wealthPts,
-              rechargePoints: rechargePts,
-              earnedItems: Array.isArray(data.earnedItems) ? data.earnedItems : [],
-              ownedItems: Array.isArray(data.ownedItems) ? data.ownedItems : []
+              wealthLevel: calculateLvl(Number(data.wealth || 0)),
+              rechargeLevel: calculateLvl(Number(data.rechargePoints || 0))
             } as User;
-
-            setUser(prev => {
-              const merged = { ...userData, ...pendingUserUpdates.current };
-              merged.wealthLevel = calculateLvl(Number(merged.wealth || 0));
-              merged.rechargeLevel = calculateLvl(Number(merged.rechargePoints || 0));
-              localStorage.setItem('voice_chat_user', JSON.stringify(merged));
-              return merged;
-            });
-            // انتهى التحميل ووجدنا مستخدم
-            setInitializing(false);
-          } else {
-            // وثيقة المستخدم غير موجودة، نعتبره غير مسجل
-            setUser(null);
-            setInitializing(false);
+            setUser(userData);
           }
+          setInitializing(false);
         });
-        return () => unsubUserDoc();
+        return () => unsubUser();
       } else {
-        // لا يوجد جلسة نشطة
         setUser(null);
-        localStorage.removeItem('voice_chat_user');
         setInitializing(false);
       }
     });
-    return () => unsubscribeAuth();
-  }, []);
 
-  useEffect(() => {
-    const unsubIdentity = onSnapshot(doc(db, 'appSettings', 'identity'), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data.appBanner) setAppBanner(data.appBanner);
-        if (data.appLogo) setAppLogo(data.appLogo);
-        if (data.appName) setAppName(data.appName);
-        if (data.authBackground) setAuthBackground(data.authBackground);
-      }
+    onSnapshot(collection(db, 'users'), (snap) => {
+      setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
     });
 
-    const unsubGameSettings = onSnapshot(doc(db, 'appSettings', 'games'), (docSnap) => {
-       if (docSnap.exists() && docSnap.data().gameSettings) setGameSettings(prev => ({ ...prev, ...docSnap.data().gameSettings }));
-    });
-
-    const unsubUsersList = onSnapshot(collection(db, 'users'), (snapshot) => {
-        setUsers(snapshot.docs.map(doc => {
-          const d = doc.data();
-          return { 
-            id: doc.id, ...d, 
-            wealthLevel: calculateLvl(Number(d.wealth || 0)), 
-            rechargeLevel: calculateLvl(Number(d.rechargePoints || 0)),
-            earnedItems: Array.isArray(d.earnedItems) ? d.earnedItems : [],
-            ownedItems: Array.isArray(d.ownedItems) ? d.ownedItems : []
-          } as User;
-        }));
-    });
-
-    const unsubRooms = onSnapshot(query(collection(db, 'rooms'), orderBy('listeners', 'desc')), (snapshot) => {
+    onSnapshot(query(collection(db, 'rooms'), orderBy('listeners', 'desc')), (snapshot) => {
       setRooms(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room)));
     });
 
-    const unsubGifts = onSnapshot(collection(db, 'gifts'), (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Gift));
-      setGifts(data.length > 0 ? data : DEFAULT_GIFTS);
+    onSnapshot(collection(db, 'gifts'), (snapshot) => {
+      setGifts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Gift)));
     });
 
-    const unsubStore = onSnapshot(collection(db, 'store'), (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StoreItem));
-      const merged = [...data];
-      DEFAULT_STORE_ITEMS.forEach(def => { if (!merged.find(m => m.id === def.id)) merged.push(def); });
-      setStoreItems(merged);
+    onSnapshot(collection(db, 'store'), (snap) => {
+      setStoreItems(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as StoreItem)));
     });
 
-    const unsubVIP = onSnapshot(collection(db, 'vip'), (snapshot) => {
-      const vips = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VIPPackage));
-      setVipLevels(vips.length > 0 ? vips : DEFAULT_VIP_LEVELS);
+    onSnapshot(collection(db, 'vip'), (snap) => {
+      setVipLevels(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as VIPPackage)));
     });
 
-    const unsubActivities = onSnapshot(query(collection(db, 'activities'), where('status', '==', 'active')), (snap) => {
-      setActivities(snap.docs.map(d => ({ id: d.id, ...d.data() } as Activity)));
+    onSnapshot(collection(db, 'activities'), (snap) => {
+      const activeActs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity))
+        .filter(a => a.status === 'active');
+      setActivities(activeActs);
     });
 
-    const unsubAnnouncements = onSnapshot(query(collection(db, 'global_announcements'), orderBy('timestamp', 'desc'), limit(1)), (snapshot) => {
-      if (!snapshot.empty) {
-        const data = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as GlobalAnnouncement;
-        if (data.id !== lastAnnouncementId.current) {
-          lastAnnouncementId.current = data.id;
-          setAnnouncement(data);
-          setTimeout(() => setAnnouncement(null), 7000);
-        }
-      }
+    onSnapshot(doc(db, 'appSettings', 'games'), (snap) => {
+      if (snap.exists()) setGameSettings(prev => ({ ...prev, ...snap.data() }));
     });
 
-    return () => { unsubIdentity(); unsubGameSettings(); unsubUsersList(); unsubRooms(); unsubGifts(); unsubStore(); unsubVIP(); unsubAnnouncements(); unsubActivities(); };
+    return () => { unsubIdentity(); unsubscribeAuth(); };
   }, []);
 
-  const allBanners = useMemo(() => {
-    const banners: { url: string; activity?: Activity }[] = [];
-    activities.forEach(act => {
-      if (act.bannerUrl) banners.push({ url: act.bannerUrl, activity: act });
-    });
-    return banners;
-  }, [activities]);
-
   useEffect(() => {
-    if (allBanners.length <= 1) return;
-    const interval = setInterval(() => {
-      setCurrentBannerIndex(prev => (prev + 1) % allBanners.length);
-    }, 5000); 
-    return () => clearInterval(interval);
-  }, [allBanners]);
+    if (activities.length > 1) {
+      bannerTimerRef.current = setInterval(() => {
+        setCurrentBannerIdx(prev => (prev + 1) % activities.length);
+      }, 5000);
+    }
+    return () => clearInterval(bannerTimerRef.current);
+  }, [activities]);
 
   const handleUpdateUser = async (updatedData: Partial<User>) => {
     if (!user) return;
-    pendingUserUpdates.current = { ...pendingUserUpdates.current, ...updatedData };
-    const newUserState = { ...user, ...updatedData };
-    if (newUserState.earnedItems && newUserState.earnedItems.length > 6) {
-      newUserState.earnedItems = newUserState.earnedItems.slice(-6);
-      updatedData.earnedItems = newUserState.earnedItems;
-    }
-    if (updatedData.wealth !== undefined) newUserState.wealthLevel = calculateLvl(Number(updatedData.wealth));
-    if (updatedData.rechargePoints !== undefined) newUserState.rechargeLevel = calculateLvl(Number(updatedData.rechargePoints));
-    setUser(newUserState);
-    localStorage.setItem('voice_chat_user', JSON.stringify(newUserState));
-    try {
-      await updateDoc(doc(db, 'users', user.id), updatedData);
-      setTimeout(() => {
-        Object.keys(updatedData).forEach(key => {
-          delete (pendingUserUpdates.current as any)[key];
+    setUser(prev => prev ? { ...prev, ...updatedData } : null);
+    try { await updateDoc(doc(db, 'users', user.id), updatedData); } catch (e) {}
+  };
+
+  const handleJoinRoom = async (room: Room) => {
+    if (!user) return;
+    if (lastJoinedRoomId.current !== room.id && user.activeEntry) {
+      try {
+        await addDoc(collection(db, 'rooms', room.id, 'entry_events'), {
+          userId: user.id,
+          userName: user.name,
+          videoUrl: user.activeEntry,
+          duration: user.activeEntryDuration || 6,
+          timestamp: serverTimestamp()
         });
-      }, 2000);
-    } catch (e: any) { 
-      console.error("Firestore Update Failed:", e);
-      if (e.message?.includes('too large') || e.message?.includes('size')) {
-        await updateDoc(doc(db, 'users', user.id), { ...updatedData, earnedItems: [] }).catch(console.error);
-      }
-    }
-  };
-
-  const handleAgencyTransfer = async (targetId: string, amount: number) => {
-    if (!user || !user.isAgency) return;
-    const targetUser = users.find(u => u.id === targetId);
-    if (!targetUser) return;
-    const success = await EconomyEngine.agencyTransfer(
-      user.id, user.agencyBalance,
-      targetId, targetUser.coins, targetUser.rechargePoints || 0,
-      amount, (agentUpdate, userUpdate) => { handleUpdateUser(agentUpdate); }
-    );
-    if (success) alert(`تم شحن ${amount.toLocaleString()} كوينز بنجاح! ✅`);
-    else alert('فشلت العملية، تأكد من رصيد وكالتك.');
-  };
-
-  const handleUpdateAnyUser = async (userId: string, data: Partial<User>) => {
-    try {
-      await updateDoc(doc(db, 'users', userId), data);
-      if (user && userId === user.id) handleUpdateUser(data);
-    } catch (e) { console.error("Admin Update User Failed:", e); }
-  };
-
-  const handleUpdateRoom = async (roomId: string, data: Partial<Room>) => {
-    try { await updateDoc(doc(db, 'rooms', roomId), data); } catch (e) { console.error("Admin Update Room Failed:", e); }
-  };
-
-  const handleLogout = async () => {
-    await signOut(auth);
-    setUser(null);
-    localStorage.removeItem('voice_chat_user');
-  };
-
-  const filteredSearchUsers = useMemo(() => {
-    if (!searchIdQuery.trim()) return [];
-    return users.filter(u => u.customId?.toString() === searchIdQuery || u.id === searchIdQuery).slice(0, 5);
-  }, [searchIdQuery, users]);
-
-  const handleRoomJoin = (room: Room) => {
-    pushNewState();
+        lastJoinedRoomId.current = room.id;
+      } catch (e) {}
+    } else { lastJoinedRoomId.current = room.id; }
+    
+    handlePushState(); 
     setCurrentRoom(room);
     setIsRoomMinimized(false);
-    updateDoc(doc(db, 'rooms', room.id), { listeners: increment(1) }).catch(() => {});
   };
 
-  const handleRoomLeave = async () => {
+  const handleLeaveRoom = async () => {
     if (!currentRoom || !user) return;
-    const roomIdToProcess = currentRoom.id;
-    const isHostLeaving = currentRoom.hostId === user.id;
+    const roomId = currentRoom.id;
+    const isHost = currentRoom.hostId === user.id;
+    if (isHost) {
+      try { await deleteDoc(doc(db, 'rooms', roomId)); } catch (e) {}
+    }
+    lastJoinedRoomId.current = null;
     setCurrentRoom(null);
     setIsRoomMinimized(false);
-    try {
-      if (isHostLeaving) await deleteDoc(doc(db, 'rooms', roomIdToProcess));
-      else {
-        const roomRef = doc(db, 'rooms', roomIdToProcess);
-        const roomSnap = await getDoc(roomRef);
-        if (roomSnap.exists()) {
-           const roomData = roomSnap.data() as Room;
-           const updatedSpeakers = (roomData.speakers || []).filter(s => s.id !== user.id);
-           await updateDoc(roomRef, { listeners: increment(-1), speakers: updatedSpeakers });
-        }
-      }
-    } catch (error) { console.error("Room Sync Error:", error); }
   };
 
-  const executeCreateRoom = async (data: any) => {
+  const handleCreateRoom = async (data: any) => {
     if (!user) return;
-    try {
-      const hostAsSpeaker = { id: user.id, customId: user.customId, name: user.name, avatar: user.avatar, seatIndex: 0, isMuted: false, charm: 0, frame: user.frame || null };
-      const roomDocRef = doc(db, 'rooms', user.id);
-      const roomData = { ...data, hostId: user.id, hostCustomId: user.customId, listeners: 1, speakers: [hostAsSpeaker], micCount: 8 };
-      await setDoc(roomDocRef, roomData);
-      handleRoomJoin({ id: user.id, ...roomData } as any);
-    } catch (e) { alert('فشل إنشاء الغرفة'); }
+    const roomId = 'room_' + Date.now();
+    await setDoc(doc(db, 'rooms', roomId), { ...data, id: roomId, hostId: user.id, hostCustomId: user.customId, listeners: 1, speakers: [{ ...user, seatIndex: 0, isMuted: false, charm: 0 }] });
+    const newRoom = { ...data, id: roomId, hostId: user.id, listeners: 1, speakers: [] };
+    handleJoinRoom(newRoom);
   };
 
-  const handleVIPPurchase = async (vip: VIPPackage) => {
-    if (!user) return;
-    const success = await EconomyEngine.buyVIP(user.id, user.coins, user.wealth, vip, handleUpdateUser);
-    if (success) {
-      alert(`مبروك! تم تفعيل رتبة ${vip.name} بنجاح ✅`);
-      setShowVIPModal(false);
-    } else alert('رصيدك غير كافٍ ❌');
-  };
+  if (initializing) return (
+    <div className="h-screen w-full bg-[#030816] flex flex-col items-center justify-center gap-6">
+       <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} className="w-16 h-16 border-4 border-amber-500/20 border-t-amber-500 rounded-full" />
+       <p className="text-white/50 font-black text-xs tracking-widest uppercase">تأمين الجلسة...</p>
+    </div>
+  );
 
-  const handleSalaryToAgencyExchange = async (agentId: string, amount: number) => {
-    if (!user) return false;
-    return await EconomyEngine.exchangeSalaryToAgency(user.id, user.diamonds, agentId, amount, handleUpdateUser);
-  };
-
-  if (initializing) return <div className="h-screen w-full bg-[#030816] flex items-center justify-center"><div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div></div>;
-
-  if (!user) return <AuthScreen onAuth={(u) => { setUser(u); localStorage.setItem('voice_chat_user', JSON.stringify(u)); }} appLogo={appLogo} authBackground={authBackground} />;
+  if (!user) return <AuthScreen onAuth={setUser} />;
 
   return (
     <div className="h-[100dvh] w-full bg-[#030816] text-white relative md:max-w-md mx-auto shadow-2xl overflow-hidden flex flex-col font-cairo">
-      <div className="absolute top-0 left-0 right-0 z-[10000] pointer-events-none">
-        <AnimatePresence>{announcement && ( <GlobalBanner announcement={announcement} /> )}</AnimatePresence>
-      </div>
       
+      <AnimatePresence>
+        {announcement && <GlobalBanner announcement={announcement} />}
+      </AnimatePresence>
+
       <div className="flex-1 overflow-y-auto pb-24 scrollbar-hide">
         {activeTab === 'home' && (
            <div className="mt-2 space-y-3 px-4 relative">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-2"><img src={appLogo} className="w-8 h-8 rounded-lg" /><span className="text-xs font-black text-white/40 uppercase tracking-widest">LIVETALK</span></div>
-                <div className="relative flex-1 max-w-[200px] mr-2">
-                   <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                   <input type="text" placeholder="ابحث بالـ ID..." value={searchIdQuery} onFocus={() => setShowSearchResults(true)} onChange={(e) => setSearchIdQuery(e.target.value)} className="w-full bg-slate-900/50 border border-white/5 rounded-full py-1.5 pr-9 pl-3 text-[10px] text-white outline-none font-black" />
-                   <AnimatePresence>
-                     {showSearchResults && searchIdQuery.trim() !== '' && (
-                       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="absolute top-10 right-0 left-0 bg-[#0f172a] border border-white/10 rounded-2xl shadow-2xl z-[110] overflow-hidden">
-                          {filteredSearchUsers.map(u => (
-                            <button key={u.id} onClick={() => { pushNewState(); setSelectedUserForProfile(u); setShowProfileSheet(true); setShowSearchResults(false); setSearchIdQuery(''); }} className="w-full p-3 flex items-center gap-3 hover:bg-white/5 border-b border-white/5 last:border-0 text-right">
-                               <div className="relative"><img src={u.avatar} className="w-10 h-10 rounded-full object-cover" />{u.frame && <img src={u.frame} className="absolute inset-0 scale-125" />}</div>
-                               <div className="flex-1 min-w-0">
-                                  <p className="text-[11px] font-black text-white truncate">{u.name}</p>
-                                  <p className="text-[8px] text-amber-500 font-bold uppercase">ID: {u.customId || u.id}</p>
-                               </div>
-                            </button>
-                          ))}
-                       </motion.div>
-                     )}
-                   </AnimatePresence>
+              <div className="flex justify-between items-center mb-2 pt-4">
+                <div className="flex items-center gap-2">
+                   <img src={appLogo} className="w-8 h-8 rounded-lg object-cover" />
+                   <span className="text-xs font-black text-white/60 uppercase tracking-widest">{appName}</span>
                 </div>
+                <button onClick={() => { handlePushState(); setShowGlobalLeaderboard(true); }} className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-600 rounded-xl flex items-center justify-center border border-amber-300/30 shadow-lg">
+                   <Trophy size={20} className="text-white" fill="currentColor" />
+                </button>
               </div>
-              
-              {allBanners.length > 0 && (
-                <div className="relative w-full h-32 rounded-2xl overflow-hidden bg-slate-800 border border-white/5 shadow-xl touch-pan-y">
-                   <AnimatePresence mode="wait">
-                      <motion.div 
-                        key={currentBannerIndex} 
-                        initial={{ opacity: 0, x: 100 }} 
-                        animate={{ opacity: 1, x: 0 }} 
-                        exit={{ opacity: 0, x: -100 }} 
-                        transition={{ duration: 0.4, ease: "easeInOut" }}
-                        drag={allBanners.length > 1 ? "x" : false}
-                        dragConstraints={{ left: 0, right: 0 }}
-                        onDragEnd={(e, info) => {
-                          if (allBanners.length <= 1) return;
-                          const threshold = 50;
-                          if (info.offset.x < -threshold) {
-                            setCurrentBannerIndex((prev) => (prev + 1) % allBanners.length);
-                          } else if (info.offset.x > threshold) {
-                            setCurrentBannerIndex((prev) => (prev - 1 + allBanners.length) % allBanners.length);
-                          }
-                        }}
-                        className="w-full h-full cursor-pointer relative touch-none" 
-                        onClick={() => { const b = allBanners[currentBannerIndex]; if (b?.activity) { pushNewState(); setActiveActivity(b.activity); setShowActivityModal(true); } }}
-                      >
-                         <img src={allBanners[currentBannerIndex]?.url} className="w-full h-full object-cover pointer-events-none" alt="Banner" />
-                      </motion.div>
-                   </AnimatePresence>
-                   {allBanners.length > 1 && (
-                     <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                        {allBanners.map((_, i) => (<div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${currentBannerIndex === i ? 'w-4 bg-amber-500' : 'w-1.5 bg-white/30'}`} />))}
-                     </div>
-                   )}
+
+              {activities.length > 0 && (
+                <div className="w-full h-36 relative overflow-hidden rounded-[2rem] border border-white/5 bg-slate-900/50">
+                   <div className="flex h-full w-full transition-transform duration-700 ease-out" style={{ transform: `translateX(${currentBannerIdx * 100}%)` }}>
+                      {activities.map(act => (
+                        <div key={act.id} onClick={() => { if(act.type === 'external_link') window.open(act.externalUrl, '_blank'); else { handlePushState(); setSelectedActivity(act); } }} className="w-full h-full shrink-0 relative cursor-pointer">
+                           <img src={act.bannerUrl} className="w-full h-full object-cover" alt={act.title} />
+                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+                           <div className="absolute bottom-4 right-6 text-right">
+                              <h4 className="text-white font-black text-sm drop-shadow-lg">{act.title}</h4>
+                           </div>
+                        </div>
+                      ))}
+                   </div>
                 </div>
               )}
 
-              <div className="flex justify-between items-center px-1"><h2 className="text-xs font-bold text-white flex items-center gap-1.5"><Flame size={14} className="text-orange-500" /> {t.activeRooms}</h2><button onClick={() => { pushNewState(); setShowGlobalLeaderboard(true); }} className="bg-gradient-to-r from-amber-500 to-orange-600 p-2 rounded-xl border border-amber-400/30"><Trophy size={18} className="text-white" fill="currentColor" /></button></div>
-              <div className="grid gap-2.5">{rooms.map(room => ( <RoomCard key={room.id} room={room} onClick={handleRoomJoin} /> ))}</div>
+              <div className="grid gap-2.5">{rooms.map(room => ( <RoomCard key={room.id} room={room} onClick={handleJoinRoom} /> ))}</div>
            </div>
         )}
-        {activeTab === 'messages' && <MessagesTab currentUser={user} onOpenChat={(p) => { pushNewState(); setPrivateChatPartner(p); }} />}
-        {activeTab === 'rank' && <ActivitiesTab onOpenGame={(g) => { pushNewState(); setActiveGame(g); }} />}
+        {activeTab === 'messages' && <MessagesTab currentUser={user} onOpenChat={(partner) => { handlePushState(); setSelectedChatPartner(partner); }} />}
+        {activeTab === 'rank' && <ActivitiesTab onOpenGame={(game) => { handlePushState(); setActiveGlobalGame(game); }} />}
         {activeTab === 'profile' && (
           <div className="flex flex-col bg-[#030816] min-h-full" dir="rtl">
-            <div className="relative w-full h-44 shrink-0 overflow-hidden">
-               {user.cover ? <img src={user.cover} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-br from-blue-900 to-black"></div>}
-               <div className="absolute bottom-3 right-5 flex items-center gap-3">
-                  <div className="relative w-16 h-16"><div className="w-full h-full rounded-full border-2 border-white/20 overflow-hidden bg-slate-900 shadow-2xl"><img src={user.avatar} className="w-full h-full object-cover" /></div>{user.frame && <img src={user.frame} className="absolute inset-0 scale-[1.3]" />}</div>
-                  <div className="flex flex-col gap-1">
-                     <h2 className="text-base font-black text-white">{user.name}</h2>
-                     <div className="flex items-center gap-2"><div className="bg-white/10 px-2 py-0.5 rounded-lg border border-white/10 text-[9px] font-black">ID:{user.customId || user.id}</div><HeaderLevelBadge level={calculateLvl(user.wealth || 0)} type="wealth" /><HeaderLevelBadge level={calculateLvl(user.rechargePoints || 0)} type="recharge" /></div>
+             <div className="relative w-full h-64 shrink-0 overflow-hidden">
+               {user.cover ? <img src={user.cover} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-br from-indigo-950 to-[#030816]"></div>}
+               <div className="absolute inset-0 bg-gradient-to-t from-[#030816] to-transparent"></div>
+               
+               <div className="absolute bottom-4 right-6 flex items-end gap-5">
+                  <div className="relative w-24 h-24 shrink-0">
+                     <img src={user.avatar} className="w-full h-full rounded-full border-4 border-[#030816] object-cover bg-slate-800" />
+                     {user.frame && <img src={user.frame} className="absolute inset-0 scale-[1.35] z-10 pointer-events-none" />}
+                  </div>
+                  
+                  <div className="flex flex-col gap-2 pb-1 text-right">
+                     <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-2xl font-black text-white drop-shadow-lg leading-tight">{user.name}</h2>
+                     </div>
+                     
+                     {/* حاوية الـ ID المطورة: تم إزالة شارات الليفل تماماً بناءً على الطلب */}
+                     <div className="flex flex-col items-start mt-1">
+                        <div className="relative inline-flex items-center justify-center">
+                           {user.badge ? (
+                             <div className="relative flex items-center justify-center h-8 min-w-[90px] group">
+                                {/* رقم الآيدي - متموضع تلقائياً في المنتصف فوق القالب */}
+                                <div className="absolute z-20 text-white font-black text-[10px] drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] tracking-tighter ml-6">
+                                   ID:{user.customId || user.id}
+                                </div>
+                                {/* القالب المرفوع */}
+                                <img src={user.badge} className="h-8 object-contain drop-shadow-lg z-10" alt="Special ID" />
+                             </div>
+                           ) : (
+                             <div className="bg-blue-600/60 backdrop-blur-md px-3 py-1 rounded-lg text-[9px] font-black shadow-lg border border-blue-400/20">ID:{user.customId || user.id}</div>
+                           )}
+                        </div>
+                     </div>
                   </div>
                </div>
-               <button onClick={() => { pushNewState(); setShowEditProfileModal(true); }} className="absolute top-10 left-5 p-2 bg-black/40 rounded-full"><Camera size={16} /></button>
+
+               <div className="absolute top-12 left-6">
+                  <button onClick={() => { handlePushState(); setShowEditProfileModal(true); }} className="p-2.5 bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 text-white active:scale-90 transition-all shadow-xl"><Edit3 size={18}/></button>
+               </div>
             </div>
-            <div className="grid grid-cols-3 gap-2 px-4 mt-5">
-              <button onClick={() => { pushNewState(); setShowWalletModal(true); }} className="h-20 rounded-2xl bg-gradient-to-r from-blue-400 to-cyan-500 flex flex-col items-center justify-center shadow-lg active:scale-95 transition-transform"><Wallet size={20}/><span className="font-black text-[11px] mt-1">Wallet</span></button>
-              <button onClick={() => { pushNewState(); setShowVIPModal(true); }} className="h-20 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-800 flex flex-col items-center justify-center shadow-lg active:scale-95 transition-transform"><Crown size={20}/><span className="font-black text-[11px] mt-1">VIP</span></button>
-              <button onClick={() => { pushNewState(); setShowStoreModal(true); }} className="h-20 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-600 flex flex-col items-center justify-center shadow-lg active:scale-95 transition-transform"><Store size={20}/><span className="font-black text-[11px] mt-1">{t.store}</span></button>
+
+            <div className="px-6 mt-8 grid grid-cols-4 gap-y-8 gap-x-4">
+               <button onClick={() => { handlePushState(); setShowWalletModal(true); }} className="flex flex-col items-center gap-2 group">
+                  <div className="w-14 h-14 bg-indigo-600/10 border border-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-500 shadow-xl group-active:scale-90 transition-transform"><Wallet size={24}/></div>
+                  <span className="text-[10px] font-black text-slate-300">المحفظة</span>
+               </button>
+               <button onClick={() => { handlePushState(); setShowStoreModal(true); }} className="flex flex-col items-center gap-2 group">
+                  <div className="w-14 h-14 bg-cyan-600/10 border border-cyan-500/20 rounded-2xl flex items-center justify-center text-cyan-500 shadow-xl group-active:scale-90 transition-transform"><ShoppingBag size={24}/></div>
+                  <span className="text-[10px] font-black text-slate-300">المتجر</span>
+               </button>
+               <button onClick={() => { handlePushState(); setShowBagModal(true); }} className="flex flex-col items-center gap-2 group">
+                  <div className="w-14 h-14 bg-purple-600/10 border border-purple-500/20 rounded-2xl flex items-center justify-center text-purple-500 shadow-xl group-active:scale-90 transition-transform"><Package size={24}/></div>
+                  <span className="text-[10px] font-black text-slate-300">الحقيبة</span>
+               </button>
+               <button onClick={() => { handlePushState(); setShowVIPModal(true); }} className="flex flex-col items-center gap-2 group">
+                  <div className="w-14 h-14 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-center text-amber-500 shadow-xl group-active:scale-90 transition-transform"><Crown size={24}/></div>
+                  <span className="text-[10px] font-black text-amber-500">الـ VIP</span>
+               </button>
+               <button onClick={() => { handlePushState(); setShowCPModal(true); }} className="flex flex-col items-center gap-2 group">
+                  <div className="w-14 h-14 bg-pink-600/10 border border-pink-500/20 rounded-2xl flex items-center justify-center text-pink-500 shadow-xl group-active:scale-90 transition-transform"><Heart size={24} fill="currentColor"/></div>
+                  <span className="text-[10px] font-black text-slate-300">الارتباط</span>
+               </button>
+               {user.isAgency && (
+                  <button onClick={() => { handlePushState(); setShowAgencyModal(true); }} className="flex flex-col items-center gap-2 group">
+                     <div className="w-14 h-14 bg-orange-600/10 border border-orange-500/20 rounded-2xl flex items-center justify-center text-orange-500 shadow-xl animate-pulse"><Zap size={24}/></div>
+                     <span className="text-[10px] font-black text-slate-300">الشحن</span>
+                  </button>
+               )}
+               {user.isHostAgent && (
+                  <button onClick={() => { handlePushState(); setShowHostAgentDashboard(true); }} className="flex flex-col items-center gap-2 group">
+                     <div className="w-14 h-14 bg-emerald-600/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-500 shadow-xl border-b-4 border-emerald-500/40"><Building size={24}/></div>
+                     <span className="text-[10px] font-black text-emerald-400">الوكالة</span>
+                  </button>
+               )}
+               {(user.isAdmin || user.isSystemModerator) && (
+                  <button onClick={() => { handlePushState(); setShowAdminPanel(true); }} className="flex flex-col items-center gap-2 group">
+                     <div className="w-14 h-14 bg-red-600/10 border border-red-500/20 rounded-2xl flex items-center justify-center text-red-500 shadow-xl"><ShieldCheck size={24}/></div>
+                     <span className="text-[10px] font-black text-slate-300">السيستم</span>
+                  </button>
+               )}
             </div>
-            <div className="mx-4 mt-5 p-5 bg-white/5 rounded-[2rem] border border-white/5 grid grid-cols-4 gap-y-6">
-               <button onClick={() => { if(user.isHostAgent) { pushNewState(); setShowHostAgentDashboard(true); } else alert('للموزعين فقط'); }} className="flex flex-col items-center gap-1"><div className={`w-12 h-12 rounded-2xl flex items-center justify-center border shadow-lg ${user.isHostAgent ? 'bg-blue-600 border-blue-400' : 'bg-slate-800'}`}><UserCheck size={20}/></div><span className="text-[8px] font-black">{t.officialAgent}</span></button>
-               <button onClick={() => { pushNewState(); setShowCPModal(true); }} className="flex flex-col items-center gap-1"><div className="w-12 h-12 bg-rose-600 rounded-2xl flex items-center justify-center shadow-lg border border-rose-400/30"><Heart size={20} fill="currentColor"/></div><span className="text-[8px] font-black">CP</span></button>
-               <button onClick={() => { if(user.isAgency) { pushNewState(); setShowAgencyModal(true); } }} className="flex flex-col items-center gap-1"><div className="w-12 h-12 bg-blue-900 rounded-2xl flex items-center justify-center"><Zap size={20}/></div><span className="text-[8px] font-black">وكالة</span></button>
-               <button onClick={() => { pushNewState(); setShowBagModal(true); }} className="flex flex-col items-center gap-1"><div className="w-12 h-12 bg-purple-600 rounded-2xl flex items-center justify-center shadow-lg border border-purple-400/30"><Package size={20}/></div><span className="text-[8px] font-black">{t.bag}</span></button>
+
+            <div className="mt-auto px-6 pb-12 pt-10">
+               <button onClick={async () => { await signOut(auth); window.location.reload(); }} className="w-full py-4 bg-red-600/10 text-red-500 rounded-2xl border border-red-500/20 font-black flex items-center justify-center gap-2 active:scale-95 transition-all"><LogOut size={18}/> تسجيل الخروج</button>
             </div>
-            <div className="mt-6 px-6 grid grid-cols-4 gap-4 pb-20">
-               <button className="flex flex-col items-center gap-1"><div className="p-2 bg-white/5 rounded-full"><UserPlus size={16}/></div><span className="text-[9px]">دعوة</span></button>
-               <button className="flex flex-col items-center gap-1"><div className="p-2 bg-white/5 rounded-full"><UserX size={16}/></div><span className="text-[9px]">حظر</span></button>
-               <button className="flex flex-col items-center gap-1"><div className="p-2 bg-white/5 rounded-full"><ShieldCheck size={16}/></div><span className="text-[9px]"> الخصوصية</span></button>
-               <button onClick={() => { if(canAccessAdmin) { pushNewState(); setShowAdminPanel(true); } else alert('غير مسموح'); }} className="flex flex-col items-center gap-1 transition-all"><div className={`p-2 rounded-full ${canAccessAdmin ? 'bg-amber-500 text-black' : 'bg-white/5 text-slate-600'}`}><Settings size={16} /></div><span className={`text-[9px] ${canAccessAdmin ? 'text-amber-500 font-black' : ''}`}>إعدادات</span></button></div>
-            <button onClick={handleLogout} className="mx-8 mb-24 py-3 bg-red-600/10 text-red-500 rounded-xl border border-red-500/20 font-black text-xs">خروج</button>
           </div>
         )}
       </div>
 
-      <AnimatePresence>{isRoomMinimized && currentRoom && (<MiniPlayer room={currentRoom} onExpand={() => setIsRoomMinimized(false)} onLeave={handleRoomLeave} isMuted={isUserMuted} onToggleMute={() => setIsUserMuted(!isUserMuted)} />)}</AnimatePresence>
-
-      <div className="absolute bottom-0 left-0 right-0 bg-[#030816] border-t border-blue-900/30 h-20 flex items-center px-4 z-20 pb-[env(safe-area-inset-bottom)]">
-         <div className="relative w-full h-14 bg-gradient-to-r from-blue-900/40 via-blue-800/20 to-blue-900/40 rounded-full border border-blue-800/30 flex items-center justify-around">
-            <button onClick={() => setActiveTab('home')} className={activeTab === 'home' ? 'text-cyan-400' : 'text-slate-500'}><Home size={20}/></button>
-            <button onClick={() => setActiveTab('messages')} className={activeTab === 'messages' ? 'text-cyan-400' : 'text-slate-500'}><MessageCircle size={20}/></button>
-            <button onClick={() => { if(user.roomTemplate) executeCreateRoom(user.roomTemplate); else { pushNewState(); setShowCreateRoomModal(true); } }} className="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center -translate-y-4 border-4 border-[#030816] shadow-lg"><Plus size={28}/></button>
-            <button onClick={() => setActiveTab('rank')} className={activeTab === 'rank' ? 'text-cyan-400' : 'text-slate-500'}><Gamepad2 size={20}/></button>
-            <button onClick={() => setActiveTab('profile')} className={activeTab === 'profile' ? 'text-cyan-400' : 'text-slate-500'}><UserIcon size={20}/></button>
+      <div className="absolute bottom-0 left-0 right-0 bg-[#030816]/80 backdrop-blur-xl border-t border-white/5 h-20 flex items-center px-4 z-20 pb-[env(safe-area-inset-bottom)]">
+         <div className="relative w-full h-14 bg-white/5 rounded-full border border-white/5 flex items-center justify-around">
+            <button onClick={() => setActiveTab('home')} className={activeTab === 'home' ? 'text-amber-400' : 'text-slate-500'}><Home size={22}/></button>
+            <button onClick={() => setActiveTab('messages')} className={activeTab === 'messages' ? 'text-amber-400' : 'text-slate-500'}><MessageCircle size={22}/></button>
+            <button onClick={() => { handlePushState(); setShowCreateRoomModal(true); }} className="w-14 h-14 bg-amber-500 rounded-full flex items-center justify-center -translate-y-4 border-4 border-[#030816] shadow-xl text-black active:scale-90 transition-transform"><Plus size={28}/></button>
+            <button onClick={() => setActiveTab('rank')} className={activeTab === 'rank' ? 'text-amber-400' : 'text-slate-500'}><Gamepad2 size={22}/></button>
+            <button onClick={() => setActiveTab('profile')} className={activeTab === 'profile' ? 'text-amber-400' : 'text-slate-500'}><UserIcon size={22}/></button>
          </div>
       </div>
 
       <AnimatePresence>
-        {currentRoom && (
-          <motion.div key="voice-room-wrapper" initial={{ y: "100%" }} animate={{ y: isRoomMinimized ? "100%" : "0%", opacity: isRoomMinimized ? 0 : 1 }} exit={{ y: "100%" }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="fixed inset-0 z-[150] overflow-hidden" style={{ pointerEvents: isRoomMinimized ? 'none' : 'auto' }}>
-            <VoiceRoom room={currentRoom} currentUser={user!} onUpdateUser={handleUpdateUser} onLeave={handleRoomLeave} onMinimize={() => setIsRoomMinimized(true)} isMinimized={isRoomMinimized} gifts={gifts} onEditProfile={() => { pushNewState(); setShowEditProfileModal(true); }} gameSettings={gameSettings} onUpdateRoom={handleUpdateRoom} isMuted={isUserMuted} onToggleMute={() => setIsUserMuted(!isUserMuted)} users={users} onOpenPrivateChat={(p) => { pushNewState(); setPrivateChatPartner(p); }} onOpenCP={() => { pushNewState(); setShowCPModal(true); }} giftCategoryLabels={giftCategoryLabels} onPushState={pushNewState} />
+        {currentRoom && !isRoomMinimized && (
+          <motion.div key="room" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="fixed inset-0 z-[150]">
+            <VoiceRoom room={currentRoom} currentUser={user!} onLeave={handleLeaveRoom} onMinimize={() => setIsRoomMinimized(true)} gifts={gifts} gameSettings={gameSettings} onUpdateUser={handleUpdateUser} users={users} onOpenPrivateChat={(partner: User) => { handlePushState(); setSelectedChatPartner(partner); }} onOpenCP={() => { handlePushState(); setShowCPModal(true); }} onPushState={handlePushState} />
           </motion.div>
         )}
+        {selectedChatPartner && <PrivateChatModal partner={selectedChatPartner} currentUser={user!} onClose={() => setSelectedChatPartner(null)} />}
+        {activeGlobalGame === 'wheel' && <WheelGameModal isOpen={true} onClose={() => setActiveGlobalGame(null)} userCoins={Number(user.coins)} onUpdateCoins={(c) => handleUpdateUser({ coins: c })} winRate={gameSettings.wheelWinRate} gameSettings={gameSettings} />}
+        {activeGlobalGame === 'slots' && <SlotsGameModal isOpen={true} onClose={() => setActiveGlobalGame(null)} userCoins={Number(user.coins)} onUpdateCoins={(c) => handleUpdateUser({ coins: c })} winRate={gameSettings.slotsWinRate} gameSettings={gameSettings} />}
+        {activeGlobalGame === 'lion' && <LionWheelGameModal isOpen={true} onClose={() => setActiveGlobalGame(null)} userCoins={Number(user.coins)} onUpdateCoins={(c) => handleUpdateUser({ coins: c })} gameSettings={gameSettings} />}
+        {showVIPModal && <VIPModal user={user!} vipLevels={vipLevels} onClose={() => setShowVIPModal(false)} onBuy={(vip) => EconomyEngine.buyVIP(user!.id, user!.coins, user!.wealth, vip, handleUpdateUser)} />}
+        {showEditProfileModal && <EditProfileModal isOpen={showEditProfileModal} onClose={() => setShowEditProfileModal(false)} currentUser={user!} onSave={handleUpdateUser} />}
+        {showBagModal && <BagModal isOpen={showBagModal} onClose={() => setShowBagModal(false)} user={user!} onEquip={(item) => handleUpdateUser({ [item.type === 'frame' ? 'frame' : item.type === 'bubble' ? 'activeBubble' : 'activeEntry']: item.url })} />}
+        {showStoreModal && <StoreModal isOpen={showStoreModal} onClose={() => setShowStoreModal(false)} items={storeItems} user={user!} onBuy={(item) => EconomyEngine.spendCoins(user!.id, user!.coins, user!.wealth, item.price, user!.ownedItems || [], item.id, handleUpdateUser, item, user!.earnedItems || [])} />}
+        {showWalletModal && <WalletModal isOpen={showWalletModal} onClose={() => setShowWalletModal(false)} user={user!} onExchange={(amt) => EconomyEngine.exchangeDiamonds(user!.id, user!.coins, user!.diamonds, amt, handleUpdateUser)} onAgencyExchange={(aid, amt) => EconomyEngine.exchangeSalaryToAgency(user!.id, user!.diamonds, aid, amt, handleUpdateUser)} />}
+        {showCreateRoomModal && <CreateRoomModal isOpen={showCreateRoomModal} onClose={() => setShowCreateRoomModal(false)} onCreate={handleCreateRoom} />}
+        {showAgencyModal && <AgencyRechargeModal isOpen={showAgencyModal} onClose={() => setShowAgencyModal(false)} agentUser={user!} users={users} onCharge={(tid, amt) => EconomyEngine.agencyTransfer(user!.id, user!.agencyBalance, tid, 0, 0, amt, (a, u) => handleUpdateUser(a))} />}
+        {showHostAgentDashboard && <HostAgentDashboard isOpen={showHostAgentDashboard} onClose={() => setShowHostAgentDashboard(false)} agentUser={user!} allUsers={users} />}
+        {showCPModal && <CPModal isOpen={showCPModal} onClose={() => setShowCPModal(false)} currentUser={user!} users={users} gameSettings={gameSettings} onUpdateUser={handleUpdateUser} />}
+        {showGlobalLeaderboard && <GlobalLeaderboardModal isOpen={showGlobalLeaderboard} onClose={() => setShowGlobalLeaderboard(false)} users={users} />}
+        {selectedActivity && <ActivityModal isOpen={!!selectedActivity} onClose={() => setSelectedActivity(null)} activity={selectedActivity} user={user!} onUpdateUser={handleUpdateUser} />}
       </AnimatePresence>
-      
-      {showGlobalLeaderboard && <GlobalLeaderboardModal isOpen={showGlobalLeaderboard} onClose={() => setShowGlobalLeaderboard(false)} users={users} />}
-      {showVIPModal && <VIPModal user={user} vipLevels={vipLevels} onClose={() => setShowVIPModal(false)} onBuy={handleVIPPurchase} />}
-      {showEditProfileModal && <EditProfileModal isOpen={showEditProfileModal} onClose={() => setShowEditProfileModal(false)} currentUser={user} onSave={handleUpdateUser} />}
-      {showStoreModal && <StoreModal isOpen={showStoreModal} onClose={() => setShowStoreModal(false)} items={storeItems} user={user} onBuy={(item) => EconomyEngine.spendCoins(user.id, user.coins, user.wealth, item.price, user.ownedItems || [], item.id, handleUpdateUser, item, user.earnedItems)} />}
-      {showBagModal && <BagModal isOpen={showBagModal} onClose={() => setShowBagModal(false)} user={user} onEquip={(item) => {
-        const updates: any = {};
-        if (item.type === 'frame') updates.frame = item.url;
-        else if (item.type === 'bubble') updates.activeBubble = item.url;
-        else if (item.type === 'entry') { updates.activeEntry = item.url; updates.activeEntryDuration = item.duration || 6; }
-        handleUpdateUser(updates);
-      }} />}
-      {showWalletModal && <WalletModal isOpen={showWalletModal} onClose={() => setShowWalletModal(false)} user={user} onExchange={(amt) => EconomyEngine.exchangeDiamonds(user.id, user.coins, user.diamonds, amt, handleUpdateUser)} onAgencyExchange={handleSalaryToAgencyExchange} />}
-      {showAdminPanel && <AdminPanel isOpen={showAdminPanel} onClose={() => setShowAdminPanel(false)} currentUser={user!} users={users} onUpdateUser={handleUpdateAnyUser} rooms={rooms} setRooms={setRooms} onUpdateRoom={handleUpdateRoom} gifts={gifts} storeItems={storeItems} vipLevels={vipLevels} gameSettings={gameSettings} setGameSettings={(s) => setDoc(doc(db, 'appSettings', 'games'), { gameSettings: s }, { merge: true })} appBanner={appBanner} onUpdateAppBanner={(url) => setDoc(doc(db, 'appSettings', 'identity'), { appBanner: url }, { merge: true })} appLogo={appLogo} onUpdateAppLogo={(url) => setDoc(doc(db, 'appSettings', 'identity'), { appLogo: url }, { merge: true })} appName={appName} onUpdateAppName={(name) => setDoc(doc(db, 'appSettings', 'identity'), { appName: name }, { merge: true })} authBackground={authBackground} onUpdateAuthBackground={(url) => setDoc(doc(db, 'appSettings', 'identity'), { authBackground: url }, { merge: true })} />}
-      {showCreateRoomModal && <CreateRoomModal isOpen={showCreateRoomModal} onClose={() => setShowCreateRoomModal(false)} onCreate={executeCreateRoom} />}
-      {user.isAgency && showAgencyModal && <AgencyRechargeModal isOpen={showAgencyModal} onClose={() => setShowAgencyModal(false)} agentUser={user} users={users} onCharge={handleAgencyTransfer} />}
-      {showCPModal && <CPModal isOpen={showCPModal} onClose={() => setShowCPModal(false)} currentUser={user} users={users} gameSettings={gameSettings} onUpdateUser={handleUpdateUser} />}
-      {user.isHostAgent && showHostAgentDashboard && <HostAgentDashboard isOpen={showHostAgentDashboard} onClose={() => setShowHostAgentDashboard(false)} agentUser={user} allUsers={users} />}
-      {activeGame === 'wheel' && <WheelGameModal isOpen={activeGame === 'wheel'} onClose={() => setActiveGame(null)} userCoins={Number(user.coins)} onUpdateCoins={(c) => handleUpdateUser({ coins: c })} winRate={gameSettings.wheelWinRate} gameSettings={gameSettings} />}
-      {activeGame === 'slots' && <SlotsGameModal isOpen={activeGame === 'slots'} onClose={() => setActiveGame(null)} userCoins={Number(user.coins)} onUpdateCoins={(c) => handleUpdateUser({ coins: c })} winRate={gameSettings.slotsWinRate} gameSettings={gameSettings} />}
-      {activeGame === 'lion' && <LionWheelGameModal isOpen={activeGame === 'lion'} onClose={() => setActiveGame(null)} userCoins={Number(user.coins)} onUpdateCoins={(c) => handleUpdateUser({ coins: c })} gameSettings={gameSettings} />}
-      <AnimatePresence>{showProfileSheet && selectedUserForProfile && (<UserProfileSheet user={selectedUserForProfile} onClose={() => setShowProfileSheet(false)} isCurrentUser={selectedUserForProfile.id === user.id} onAction={(action) => { if (action === 'message') setPrivateChatPartner(selectedUserForProfile); if (action === 'cp') { pushNewState(); setShowCPModal(true); } if (action === 'gift') { pushNewState(); setShowStoreModal(true); } }} currentUser={user} allUsers={users} currentRoom={currentRoom || { id: 'lobby', title: 'لوبي', category: 'تعارف', hostId: '', speakers: [], thumbnail: '', listeners: 0, background: '' }} />)}</AnimatePresence>
-      <AnimatePresence>{privateChatPartner && (<PrivateChatModal partner={privateChatPartner} currentUser={user} onClose={() => setPrivateChatPartner(null)} />)}</AnimatePresence>
-      <AnimatePresence>{showActivityModal && activeActivity && (<ActivityModal isOpen={showActivityModal} onClose={() => setShowActivityModal(false)} activity={activeActivity} user={user} onUpdateUser={handleUpdateUser} />)}</AnimatePresence>
+      {isRoomMinimized && currentRoom && <MiniPlayer room={currentRoom} onExpand={() => setIsRoomMinimized(false)} onLeave={handleLeaveRoom} isMuted={isUserMuted} onToggleMute={() => setIsUserMuted(!isUserMuted)} />}
+      {showAdminPanel && <AdminPanel isOpen={showAdminPanel} onClose={() => setShowAdminPanel(false)} currentUser={user!} users={users} onUpdateUser={(uid, data) => updateDoc(doc(db, 'users', uid), data)} rooms={rooms} setRooms={() => {}} onUpdateRoom={() => Promise.resolve()} gifts={gifts} storeItems={storeItems} vipLevels={vipLevels} gameSettings={gameSettings} setGameSettings={async (s) => setGameSettings(s)} appBanner="" onUpdateAppBanner={() => {}} appLogo={appLogo} onUpdateAppLogo={(l) => setDoc(doc(db, 'appSettings', 'identity'), { appLogo: l }, { merge: true })} appName={appName} onUpdateAppName={(n) => setDoc(doc(db, 'appSettings', 'identity'), { appName: n }, { merge: true })} authBackground={authBackground} onUpdateAuthBackground={(b) => setDoc(doc(db, 'appSettings', 'identity'), { authBackground: b }, { merge: true })} />}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Layout, Upload, Image as ImageIcon, Trash2, Save, Sparkles } from 'lucide-react';
+import { Layout, Upload, Image as ImageIcon, Trash2, Save, Sparkles, Link as LinkIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { db } from '../../services/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -13,6 +13,7 @@ const LAYOUT_TYPES = [8, 10, 15, 20];
 
 const AdminMicSkins: React.FC<AdminMicSkinsProps> = ({ handleFileUpload }) => {
   const [skins, setSkins] = useState<Record<number, string>>({});
+  const [inputLinks, setInputLinks] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,7 +21,14 @@ const AdminMicSkins: React.FC<AdminMicSkinsProps> = ({ handleFileUpload }) => {
       const docRef = doc(db, 'appSettings', 'micSkins');
       const snap = await getDoc(docRef);
       if (snap.exists()) {
-        setSkins(snap.data() as Record<number, string>);
+        const data = snap.data() as Record<number, string>;
+        setSkins(data);
+        // مزامنة الروابط في حقول الإدخال
+        const initialLinks: Record<number, string> = {};
+        Object.keys(data).forEach(key => {
+          initialLinks[Number(key)] = data[Number(key)];
+        });
+        setInputLinks(initialLinks);
       }
       setLoading(false);
     };
@@ -28,10 +36,20 @@ const AdminMicSkins: React.FC<AdminMicSkinsProps> = ({ handleFileUpload }) => {
   }, []);
 
   const handleSaveSkin = async (count: number, url: string) => {
+    if (!url) return;
     const newSkins = { ...skins, [count]: url };
     setSkins(newSkins);
     await setDoc(doc(db, 'appSettings', 'micSkins'), newSkins);
-    alert(`تم تحديث شكل مايكات الـ ${count} بنجاح! ✨`);
+  };
+
+  const handleLinkSubmit = async (count: number) => {
+    const url = inputLinks[count];
+    if (!url) {
+      alert('يرجى إدخال الرابط أولاً');
+      return;
+    }
+    await handleSaveSkin(count, url);
+    alert(`تم تحديث شكل مايكات الـ ${count} عبر الرابط بنجاح! ✨`);
   };
 
   const removeSkin = async (count: number) => {
@@ -39,10 +57,15 @@ const AdminMicSkins: React.FC<AdminMicSkinsProps> = ({ handleFileUpload }) => {
     const newSkins = { ...skins };
     delete newSkins[count];
     setSkins(newSkins);
+    
+    const newLinks = { ...inputLinks };
+    delete newLinks[count];
+    setInputLinks(newLinks);
+
     await setDoc(doc(db, 'appSettings', 'micSkins'), newSkins);
   };
 
-  if (loading) return <div className="text-center py-20 text-slate-500">جاري تحميل الإعدادات...</div>;
+  if (loading) return <div className="text-center py-20 text-slate-500 font-cairo">جاري تحميل الإعدادات...</div>;
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 text-right font-cairo" dir="rtl">
@@ -50,9 +73,9 @@ const AdminMicSkins: React.FC<AdminMicSkinsProps> = ({ handleFileUpload }) => {
         <div className="relative z-10">
           <h3 className="text-2xl font-black text-white flex items-center gap-3">
             <div className="p-2 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-900/40"><Layout className="text-white" /></div>
-            تخصيص أشكال المايكات
+            تخصيص أشكال المايكات (رفع أو رابط)
           </h3>
-          <p className="text-slate-500 text-xs font-bold mt-2 pr-1">ارفع صوراً مخصصة تظهر كخلفية للمقاعد الفارغة في الغرفة لكل مستوى.</p>
+          <p className="text-slate-500 text-xs font-bold mt-2 pr-1">يمكنك رفع صورة من جهازك أو وضع رابط مباشر للصورة لتغيير مظهر المقاعد الفارغة.</p>
         </div>
       </div>
 
@@ -74,9 +97,9 @@ const AdminMicSkins: React.FC<AdminMicSkinsProps> = ({ handleFileUpload }) => {
                )}
             </div>
 
-            <div className="relative aspect-square w-32 mx-auto rounded-[2rem] overflow-hidden border-2 border-dashed border-white/10 bg-black/40 flex items-center justify-center group">
+            <div className="relative aspect-square w-32 mx-auto rounded-[2rem] overflow-hidden border-2 border-dashed border-white/10 bg-black/40 flex items-center justify-center group shadow-inner">
                {skins[count] ? (
-                 <img src={skins[count]} className="w-full h-full object-contain" />
+                 <img src={skins[count]} className="w-full h-full object-contain p-2" alt={`Skin ${count}`} />
                ) : (
                  <div className="flex flex-col items-center gap-2 text-slate-600">
                     <ImageIcon size={32} />
@@ -84,7 +107,7 @@ const AdminMicSkins: React.FC<AdminMicSkinsProps> = ({ handleFileUpload }) => {
                  </div>
                )}
                
-               <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
+               <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity z-10">
                   <div className="flex flex-col items-center gap-1">
                     <Upload size={20} className="text-white" />
                     <span className="text-[10px] text-white font-black">تغيير الصورة</span>
@@ -93,15 +116,41 @@ const AdminMicSkins: React.FC<AdminMicSkinsProps> = ({ handleFileUpload }) => {
                     type="file" 
                     accept="image/*" 
                     className="hidden" 
-                    onChange={(e) => handleFileUpload(e, (url) => handleSaveSkin(count, url), 300, 300)} 
+                    onChange={(e) => handleFileUpload(e, (url) => {
+                      handleSaveSkin(count, url);
+                      setInputLinks(prev => ({...prev, [count]: url}));
+                    }, 300, 300)} 
                   />
                </label>
             </div>
 
-            <div className="pt-4 border-t border-white/5 flex items-center gap-2">
+            {/* حقل الرابط الجديد */}
+            <div className="space-y-2">
+               <label className="text-[10px] font-black text-slate-500 pr-1 uppercase">وضع رابط مباشر للصورة</label>
+               <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input 
+                      type="text" 
+                      value={inputLinks[count] || ''}
+                      onChange={(e) => setInputLinks(prev => ({...prev, [count]: e.target.value}))}
+                      placeholder="https://example.com/image.png"
+                      className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pr-9 pl-3 text-[10px] text-blue-400 outline-none focus:border-indigo-500/50 transition-all font-bold"
+                    />
+                    <LinkIcon size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600" />
+                  </div>
+                  <button 
+                    onClick={() => handleLinkSubmit(count)}
+                    className="px-4 bg-indigo-600 text-white rounded-xl active:scale-90 transition-transform flex items-center justify-center"
+                  >
+                    <Save size={16} />
+                  </button>
+               </div>
+            </div>
+
+            <div className="pt-2 border-t border-white/5 flex items-center gap-2">
                <Sparkles size={14} className="text-amber-500" />
-               <p className="text-[10px] text-slate-500 font-bold leading-relaxed">
-                  يفضل استخدام صور بصيغة PNG شفافة أو GIF بحجم 200x200 بكسل.
+               <p className="text-[9px] text-slate-500 font-bold leading-relaxed">
+                  يفضل استخدام صور PNG شفافة بحجم 200x200 بكسل.
                </p>
             </div>
           </motion.div>
