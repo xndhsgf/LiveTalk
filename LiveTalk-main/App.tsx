@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Home, User as UserIcon, Plus, Crown, Settings, LogOut, Smartphone, MessageCircle, Gamepad2, Search, Wallet, ShoppingBag, Package, Building, Zap, ShieldCheck, Edit3, Heart, ChevronRight, ChevronLeft, Globe, Trophy } from 'lucide-react';
 import RoomCard from './components/RoomCard';
 import VoiceRoom from './components/VoiceRoom';
@@ -37,21 +37,6 @@ const calculateLvl = (pts: number) => {
   if (!pts || pts <= 0) return 1;
   const l = Math.floor(Math.sqrt(pts / 50000)); 
   return Math.max(1, Math.min(200, l));
-};
-
-// شارة لفل احترافية ومنسقة (تُستخدم في أماكن أخرى ولكن تم إزالتها من منطقة الهوية المطلوبة)
-const ProfileBadge: React.FC<{ level: number; type: 'wealth' | 'recharge' }> = ({ level, type }) => {
-  const isWealth = type === 'wealth';
-  return (
-    <div className="relative h-5 min-w-[55px] flex items-center pr-2 shrink-0">
-      <div className={`absolute inset-0 right-2 rounded-l-md border border-white/10 ${isWealth ? 'bg-gradient-to-r from-purple-700 to-indigo-600 shadow-[0_0_10px_rgba(124,58,237,0.3)]' : 'bg-slate-900 border-blue-500/20'}`}></div>
-      <div className="relative z-10 flex-1 text-center pr-1"><span className="text-[10px] font-black italic text-white drop-shadow-md">{level}</span></div>
-      <div className="relative z-20 w-5 h-5 flex items-center justify-center -mr-1">
-        <div className={`absolute inset-0 rounded-sm transform rotate-45 border border-white/20 ${isWealth ? 'bg-purple-600' : 'bg-black'}`}></div>
-        <span className="relative z-30 text-[8px] mb-0.5">{isWealth ? '💎' : '⚡'}</span>
-      </div>
-    </div>
-  );
 };
 
 export default function App() {
@@ -96,12 +81,12 @@ export default function App() {
     slotsWinRate: 35, wheelWinRate: 45, lionWinRate: 35, luckyGiftWinRate: 30, luckyGiftRefundPercent: 0, luckyXEnabled: false, luckyMultipliers: [], wheelJackpotX: 8, wheelNormalX: 2, slotsSevenX: 20, slotsFruitX: 5, availableEmojis: [], emojiDuration: 4
   });
 
-  const handlePushState = () => {
+  const handlePushState = useCallback(() => {
     window.history.pushState({ popup: true }, "");
-  };
+  }, []);
 
   useEffect(() => {
-    const handlePopState = (event: PopStateEvent) => {
+    const handlePopState = () => {
       if (showAdminPanel) setShowAdminPanel(false);
       else if (showVIPModal) setShowVIPModal(false);
       else if (showEditProfileModal) setShowEditProfileModal(false);
@@ -121,12 +106,7 @@ export default function App() {
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [
-    showAdminPanel, showVIPModal, showEditProfileModal, showBagModal, showStoreModal, 
-    showWalletModal, showCreateRoomModal, showAgencyModal, showHostAgentDashboard, 
-    showCPModal, showGlobalLeaderboard, selectedActivity, selectedChatPartner, 
-    activeGlobalGame, currentRoom, isRoomMinimized
-  ]);
+  }, [showAdminPanel, showVIPModal, showEditProfileModal, showBagModal, showStoreModal, showWalletModal, showCreateRoomModal, showAgencyModal, showHostAgentDashboard, showCPModal, showGlobalLeaderboard, selectedActivity, selectedChatPartner, activeGlobalGame, currentRoom, isRoomMinimized]);
 
   useEffect(() => {
     const unsubIdentity = onSnapshot(doc(db, 'appSettings', 'identity'), (snap) => {
@@ -138,18 +118,16 @@ export default function App() {
       }
     });
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        const userRef = doc(db, 'users', firebaseUser.uid);
-        const unsubUser = onSnapshot(userRef, (docSnap) => {
+        const unsubUser = onSnapshot(doc(db, 'users', firebaseUser.uid), (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
-            const userData = { 
+            setUser({ 
               id: docSnap.id, ...data,
               wealthLevel: calculateLvl(Number(data.wealth || 0)),
               rechargeLevel: calculateLvl(Number(data.rechargePoints || 0))
-            } as User;
-            setUser(userData);
+            } as User);
           }
           setInitializing(false);
         });
@@ -160,37 +138,38 @@ export default function App() {
       }
     });
 
-    onSnapshot(collection(db, 'users'), (snap) => {
+    const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
       setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
     });
 
-    onSnapshot(query(collection(db, 'rooms'), orderBy('listeners', 'desc')), (snapshot) => {
+    const unsubRooms = onSnapshot(query(collection(db, 'rooms'), orderBy('listeners', 'desc')), (snapshot) => {
       setRooms(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room)));
     });
 
-    onSnapshot(collection(db, 'gifts'), (snapshot) => {
+    const unsubGifts = onSnapshot(collection(db, 'gifts'), (snapshot) => {
       setGifts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Gift)));
     });
 
-    onSnapshot(collection(db, 'store'), (snap) => {
+    const unsubStore = onSnapshot(collection(db, 'store'), (snap) => {
       setStoreItems(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as StoreItem)));
     });
 
-    onSnapshot(collection(db, 'vip'), (snap) => {
+    const unsubVIP = onSnapshot(collection(db, 'vip'), (snap) => {
       setVipLevels(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as VIPPackage)));
     });
 
-    onSnapshot(collection(db, 'activities'), (snap) => {
-      const activeActs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity))
-        .filter(a => a.status === 'active');
-      setActivities(activeActs);
+    const unsubActivities = onSnapshot(collection(db, 'activities'), (snap) => {
+      setActivities(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity)).filter(a => a.status === 'active'));
     });
 
-    onSnapshot(doc(db, 'appSettings', 'games'), (snap) => {
+    const unsubGames = onSnapshot(doc(db, 'appSettings', 'games'), (snap) => {
       if (snap.exists()) setGameSettings(prev => ({ ...prev, ...snap.data() }));
     });
 
-    return () => { unsubIdentity(); unsubscribeAuth(); };
+    return () => {
+      unsubIdentity(); unsubscribeAuth(); unsubUsers(); unsubRooms();
+      unsubGifts(); unsubStore(); unsubVIP(); unsubActivities(); unsubGames();
+    };
   }, []);
 
   useEffect(() => {
@@ -204,7 +183,6 @@ export default function App() {
 
   const handleUpdateUser = async (updatedData: Partial<User>) => {
     if (!user) return;
-    setUser(prev => prev ? { ...prev, ...updatedData } : null);
     try { await updateDoc(doc(db, 'users', user.id), updatedData); } catch (e) {}
   };
 
@@ -213,16 +191,12 @@ export default function App() {
     if (lastJoinedRoomId.current !== room.id && user.activeEntry) {
       try {
         await addDoc(collection(db, 'rooms', room.id, 'entry_events'), {
-          userId: user.id,
-          userName: user.name,
-          videoUrl: user.activeEntry,
-          duration: user.activeEntryDuration || 6,
-          timestamp: serverTimestamp()
+          userId: user.id, userName: user.name, videoUrl: user.activeEntry,
+          duration: user.activeEntryDuration || 6, timestamp: serverTimestamp()
         });
-        lastJoinedRoomId.current = room.id;
       } catch (e) {}
-    } else { lastJoinedRoomId.current = room.id; }
-    
+    }
+    lastJoinedRoomId.current = room.id;
     handlePushState(); 
     setCurrentRoom(room);
     setIsRoomMinimized(false);
@@ -230,10 +204,8 @@ export default function App() {
 
   const handleLeaveRoom = async () => {
     if (!currentRoom || !user) return;
-    const roomId = currentRoom.id;
-    const isHost = currentRoom.hostId === user.id;
-    if (isHost) {
-      try { await deleteDoc(doc(db, 'rooms', roomId)); } catch (e) {}
+    if (currentRoom.hostId === user.id) {
+      try { await deleteDoc(doc(db, 'rooms', currentRoom.id)); } catch (e) {}
     }
     lastJoinedRoomId.current = null;
     setCurrentRoom(null);
@@ -243,15 +215,15 @@ export default function App() {
   const handleCreateRoom = async (data: any) => {
     if (!user) return;
     const roomId = 'room_' + Date.now();
-    await setDoc(doc(db, 'rooms', roomId), { ...data, id: roomId, hostId: user.id, hostCustomId: user.customId, listeners: 1, speakers: [{ ...user, seatIndex: 0, isMuted: false, charm: 0 }] });
-    const newRoom = { ...data, id: roomId, hostId: user.id, listeners: 1, speakers: [] };
-    handleJoinRoom(newRoom);
+    const roomPayload = { ...data, id: roomId, hostId: user.id, hostCustomId: user.customId, listeners: 1, speakers: [{ ...user, seatIndex: 0, isMuted: false, charm: 0 }] };
+    await setDoc(doc(db, 'rooms', roomId), roomPayload);
+    handleJoinRoom(roomPayload as Room);
   };
 
   if (initializing) return (
     <div className="h-screen w-full bg-[#030816] flex flex-col items-center justify-center gap-6">
        <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} className="w-16 h-16 border-4 border-amber-500/20 border-t-amber-500 rounded-full" />
-       <p className="text-white/50 font-black text-xs tracking-widest uppercase">تأمين الجلسة...</p>
+       <p className="text-white/50 font-black text-xs tracking-widest uppercase">جاري تشغيل محرك فيفو...</p>
     </div>
   );
 
@@ -259,10 +231,7 @@ export default function App() {
 
   return (
     <div className="h-[100dvh] w-full bg-[#030816] text-white relative md:max-w-md mx-auto shadow-2xl overflow-hidden flex flex-col font-cairo">
-      
-      <AnimatePresence>
-        {announcement && <GlobalBanner announcement={announcement} />}
-      </AnimatePresence>
+      <AnimatePresence>{announcement && <GlobalBanner announcement={announcement} />}</AnimatePresence>
 
       <div className="flex-1 overflow-y-auto pb-24 scrollbar-hide">
         {activeTab === 'home' && (
@@ -292,7 +261,6 @@ export default function App() {
                    </div>
                 </div>
               )}
-
               <div className="grid gap-2.5">{rooms.map(room => ( <RoomCard key={room.id} room={room} onClick={handleJoinRoom} /> ))}</div>
            </div>
         )}
@@ -303,28 +271,18 @@ export default function App() {
              <div className="relative w-full h-64 shrink-0 overflow-hidden">
                {user.cover ? <img src={user.cover} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-br from-indigo-950 to-[#030816]"></div>}
                <div className="absolute inset-0 bg-gradient-to-t from-[#030816] to-transparent"></div>
-               
                <div className="absolute bottom-4 right-6 flex items-end gap-5">
                   <div className="relative w-24 h-24 shrink-0">
                      <img src={user.avatar} className="w-full h-full rounded-full border-4 border-[#030816] object-cover bg-slate-800" />
                      {user.frame && <img src={user.frame} className="absolute inset-0 scale-[1.35] z-10 pointer-events-none" />}
                   </div>
-                  
                   <div className="flex flex-col gap-2 pb-1 text-right">
-                     <div className="flex items-center gap-2 flex-wrap">
-                        <h2 className="text-2xl font-black text-white drop-shadow-lg leading-tight">{user.name}</h2>
-                     </div>
-                     
-                     {/* حاوية الـ ID المطورة: تم إزالة شارات الليفل تماماً بناءً على الطلب */}
+                     <h2 className="text-2xl font-black text-white drop-shadow-lg leading-tight">{user.name}</h2>
                      <div className="flex flex-col items-start mt-1">
                         <div className="relative inline-flex items-center justify-center">
                            {user.badge ? (
                              <div className="relative flex items-center justify-center h-8 min-w-[90px] group">
-                                {/* رقم الآيدي - متموضع تلقائياً في المنتصف فوق القالب */}
-                                <div className="absolute z-20 text-white font-black text-[10px] drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] tracking-tighter ml-6">
-                                   ID:{user.customId || user.id}
-                                </div>
-                                {/* القالب المرفوع */}
+                                <div className="absolute z-20 text-white font-black text-[10px] drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] tracking-tighter ml-6">ID:{user.customId || user.id}</div>
                                 <img src={user.badge} className="h-8 object-contain drop-shadow-lg z-10" alt="Special ID" />
                              </div>
                            ) : (
@@ -334,7 +292,6 @@ export default function App() {
                      </div>
                   </div>
                </div>
-
                <div className="absolute top-12 left-6">
                   <button onClick={() => { handlePushState(); setShowEditProfileModal(true); }} className="p-2.5 bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 text-white active:scale-90 transition-all shadow-xl"><Edit3 size={18}/></button>
                </div>
